@@ -191,7 +191,7 @@
       position: absolute;
       top: 105px;
       right: 16px;
-      width: 240px;
+      width: 245px;
       padding: 14px;
       display: flex;
       flex-direction: column;
@@ -298,11 +298,12 @@
     .mode-indicator {
       font-size: 11px;
       text-align: center;
-      padding: 4px 8px;
+      padding: 5px 8px;
       border-radius: 4px;
       background: rgba(0, 255, 136, 0.1);
       color: var(--neon-green);
       border: 1px solid rgba(0, 255, 136, 0.3);
+      line-height: 1.4;
     }
 
     .mode-indicator.crater-mode {
@@ -528,10 +529,11 @@
       flex-direction: column;
       align-items: center;
       pointer-events: none;
+      z-index: 20;
     }
 
     .hiker-label-box {
-      background: rgba(10, 15, 24, 0.88);
+      background: rgba(10, 15, 24, 0.9);
       border: 1.5px solid var(--neon-orange);
       color: #fff;
       padding: 4px 10px;
@@ -564,17 +566,102 @@
       box-shadow: 0 0 16px var(--neon-orange), 0 0 30px #ff3d00;
     }
 
-    /* 地標點小標籤 */
+    /* 合目與山頂靜態小標籤 */
     .poi-marker {
-      background: rgba(7, 11, 18, 0.8);
-      border: 1px solid rgba(0, 255, 136, 0.6);
-      color: var(--text-white);
+      background: rgba(7, 11, 18, 0.78);
+      border: 1px solid rgba(0, 255, 136, 0.45);
+      color: rgba(240, 246, 252, 0.88);
       padding: 2px 7px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       white-space: nowrap;
       box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      pointer-events: none;
+    }
+
+    .poi-dot-crater {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      border: 1.5px solid #000;
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    /* ==========================================================================
+       【新增】火山口聖跡 Geo-fencing 自動觸發 3D 彈出視窗樣式 (Dark Glassmorphism)
+       ========================================================================== */
+    .crater-geo-popup {
+      z-index: 35 !important;
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      animation: popupAppear 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .crater-geo-popup.fade-out {
+      opacity: 0 !important;
+      transform: translateY(-8px) scale(0.95);
+    }
+
+    @keyframes popupAppear {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .crater-geo-popup .mapboxgl-popup-content {
+      background: rgba(8, 13, 22, 0.88) !important;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1.5px solid var(--neon-green);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text-white);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8), 0 0 18px rgba(0, 255, 136, 0.35);
+      min-width: 190px;
+      pointer-events: none;
+    }
+
+    .crater-geo-popup .mapboxgl-popup-tip {
+      border-top-color: var(--neon-green) !important;
+      border-bottom-color: var(--neon-green) !important;
+    }
+
+    .geo-popup-badge {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--neon-orange-light);
+      letter-spacing: 1px;
+      margin-bottom: 3px;
+    }
+
+    .geo-popup-title {
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--neon-green);
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .geo-popup-desc {
+      font-size: 12px;
+      color: #ffffff;
+      line-height: 1.45;
+      margin-bottom: 5px;
+    }
+
+    .geo-popup-dist {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 4px;
     }
 
     /* Mapbox Token 提示對話框 */
@@ -654,11 +741,11 @@
       <span class="station-arrow">➜</span>
       <div class="station-pill" data-elev="3100" data-lng="138.7392" data-lat="35.3695">八合目 <span class="elev">3,100m</span></div>
       <span class="station-arrow">➜</span>
-      <div class="station-pill" data-elev="3600" data-lng="138.7360" data-lat="35.3652">九合目 <span class="elev">3,600m</span></div>
+      <div class="station-pill" data-elev="3600" data-lng="138.7368" data-lat="35.3682">九合目 <span class="elev">3,600m</span></div>
       <span class="station-arrow">➜</span>
-      <div class="station-pill" data-elev="3710" data-lng="138.7345" data-lat="35.3642">久須志神社(山頂終點) <span class="elev">3,710m</span></div>
+      <div class="station-pill" data-elev="3710" data-lng="138.7360" data-lat="35.3675">久須志神社(山頂終點) <span class="elev">3,710m</span></div>
       <span class="station-arrow">➜</span>
-      <div class="station-pill peak" data-elev="3776" data-lng="138.7274" data-lat="35.3606">▲最高峰劍峰 <span class="elev">3,776m</span></div>
+      <div class="station-pill peak" data-elev="3776" data-lng="138.7275" data-lat="35.3606">▲最高峰劍峰 <span class="elev">3,776m</span></div>
     </div>
   </div>
 
@@ -680,7 +767,7 @@
 
     <div class="cam-readout">
       <div>方位角 Bearing: <span class="val" id="valBearing">-145°</span></div>
-      <div>俯角 Pitch: <span class="val" id="valPitch">62°</span></div>
+      <div>俯角 Pitch: <span class="val" id="valPitch">60°</span></div>
     </div>
 
     <div class="toggle-list">
@@ -694,7 +781,7 @@
     </button>
 
     <div class="mode-indicator" id="cameraModeBadge">
-      目前模式：登山軌跡跟隨視角
+      目前模式：登山軌跡平滑跟隨
     </div>
   </div>
 
@@ -757,7 +844,7 @@
     <div class="token-box glass-panel">
       <h3>🔑 請輸入 Mapbox Access Token</h3>
       <p>
-        您尚未在程式碼第 325 行填入您的 <code>mapboxgl.accessToken</code>。<br/>
+        您尚未在程式碼中填入您的 <code>mapboxgl.accessToken</code>。<br/>
         您可以直接在下方貼上您的 Mapbox Public Token (<code>pk.eyJ...</code>) 立即啟動 3D 富士山地形儀表板：
       </p>
       <input type="text" id="tokenInput" class="token-input" placeholder="pk.eyJ1Ijoi..." />
@@ -771,15 +858,85 @@
     // ============================================================================
     mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
 
-    // 核心座標常數
-    const FUJI_CENTER = [138.7275, 35.3606]; // 富士山中心點
-    const CRATER_CENTER = [138.7314, 35.3627]; // 火山口正中央（御鉢巡り核心）
+    // 核心地理座標常數
+    const FUJI_CENTER = [138.7275, 35.3606];
+    const CRATER_CENTER = [138.7314, 35.3627]; // 火山口正中央（大內院）
     const INITIAL_CAMERA = {
       center: [138.7365, 35.3740],
       zoom: 13.3,
-      pitch: 62,
+      pitch: 60,
       bearing: -145
     };
+
+    // ============================================================================
+    // 【要求 2.1】火山口聖跡景點陣列（Waypoints Array）
+    // ============================================================================
+    const CRATER_WAYPOINTS = [
+      {
+        id: 'kusushi',
+        name: '久須志神社',
+        lng: 138.7360,
+        lat: 35.3675,
+        desc: '吉田路線登頂終點。',
+        radius: 80
+      },
+      {
+        id: 'jojugatake',
+        name: '成就岳',
+        lng: 138.7365,
+        lat: 35.3650,
+        desc: '火山口東側岩峰，俯瞰吉田與須走路線交會處。',
+        radius: 75
+      },
+      {
+        id: 'izugatake',
+        name: '伊豆岳',
+        lng: 138.7355,
+        lat: 35.3615,
+        desc: '緊鄰大內院東緣的陡峭火山口壁峰。',
+        radius: 75
+      },
+      {
+        id: 'asahidake',
+        name: '朝日岳',
+        lng: 138.7335,
+        lat: 35.3585,
+        desc: '觀賞御來光的絕佳地點。',
+        radius: 80
+      },
+      {
+        id: 'gotemba_top',
+        name: '御殿場口・富士宮口頂上',
+        lng: 138.7295,
+        lat: 35.3575,
+        desc: '南側登頂終點，毗鄰富士山頂淺間大社奧宮。',
+        radius: 80
+      },
+      {
+        id: 'kencho',
+        name: '▲ 劍峰',
+        lng: 138.7275,
+        lat: 35.3606,
+        desc: '日本最高峰，海拔 3,776m。',
+        radius: 80
+      },
+      {
+        id: 'hakusandake',
+        name: '白山岳',
+        lng: 138.7265,
+        lat: 35.3665,
+        desc: '火山口北側最高峰（海拔 3,756m），可遠眺白山連峰。',
+        radius: 80
+      },
+      {
+        id: 'dainaiin',
+        name: '大內院',
+        lng: 138.7314,
+        lat: 35.3627,
+        desc: '富士山火山口神聖核心。',
+        radius: 80
+      }
+    ];
 
     // 狀態管理變數
     let map = null;
@@ -787,7 +944,7 @@
     let hikerMarker = null;
     let hikerMarkerEl = null;
 
-    let trackPoints = []; // [{lng, lat, ele, time, distKm, ascent, slope}]
+    let trackPoints = [];
     let currentFloatIndex = 0;
     let isPlaying = false;
     let playSpeed = 1;
@@ -796,10 +953,160 @@
     let craterModeActive = false;
     let lastFrameTime = 0;
 
-    // 內建真實感吉田路線（取自您上傳的 Garmin GPX 前段 + 延伸至六~九合目與山頂御鉢巡り火山口環線）
+    // 地理圍欄 Popup 狀態
+    let activeWaypointId = null;
+    let activeWaypointPopup = null;
+
+    // ============================================================================
+    // 【要求 1】相機位置線性插值（Lerp）與平滑運鏡狀態機
+    // ============================================================================
+    const camState = {
+      curLng: INITIAL_CAMERA.center[0],
+      curLat: INITIAL_CAMERA.center[1],
+      curZoom: INITIAL_CAMERA.zoom,
+      curPitch: INITIAL_CAMERA.pitch,
+      curBearing: INITIAL_CAMERA.bearing,
+      targetLng: INITIAL_CAMERA.center[0],
+      targetLat: INITIAL_CAMERA.center[1],
+      targetZoom: INITIAL_CAMERA.zoom,
+      targetPitch: INITIAL_CAMERA.pitch,
+      targetBearing: INITIAL_CAMERA.bearing
+    };
+
+    // 一般數值線性插值
+    function lerp(start, end, weight) {
+      return start + (end - start) * weight;
+    }
+
+    // 360度圓周角最短路徑插值（確保跨越 -180°/180° 時不會反轉繞圈）
+    function lerpAngle(current, target, weight) {
+      const shortestDiff = ((((target - current) % 360) + 540) % 360) - 180;
+      return current + shortestDiff * weight;
+    }
+
+    // 同步當前地圖真實相機參數至 camState（供使用者手動拖曳或 flyTo 結束後無縫接軌）
+    function syncCamStateFromMap(syncTargetAsWell = false) {
+      if (!map) return;
+      const c = map.getCenter();
+      camState.curLng = c.lng;
+      camState.curLat = c.lat;
+      camState.curZoom = map.getZoom();
+      camState.curPitch = map.getPitch();
+      camState.curBearing = map.getBearing();
+
+      if (syncTargetAsWell) {
+        camState.targetLng = c.lng;
+        camState.targetLat = c.lat;
+        camState.targetZoom = camState.curZoom;
+        camState.targetPitch = camState.curPitch;
+        camState.targetBearing = camState.curBearing;
+      }
+    }
+
+    // 【核心函數 1】無人機絲滑環繞演算法 (smoothCameraLoop)
+    function smoothCameraLoop() {
+      if (!map || !lockHiker || !isPlaying) return;
+
+      // 1. 中心目標點 (Look-at Target) 平滑逼近
+      camState.curLng = lerp(camState.curLng, camState.targetLng, 0.06);
+      camState.curLat = lerp(camState.curLat, camState.targetLat, 0.06);
+
+      // 2. Zoom 與 Pitch (保持穩定在 55~65 度之間) 平滑逼近
+      camState.curZoom = lerp(camState.curZoom, camState.targetZoom, 0.04);
+      camState.curPitch = lerp(camState.curPitch, camState.targetPitch, 0.05);
+
+      // 3. 方位角 (Bearing) 嚴格以「目前角度 + (目標角度 - 目前角度) * 0.05」平滑權重逼近
+      camState.curBearing = lerpAngle(camState.curBearing, camState.targetBearing, 0.05);
+
+      // 4. 單影格直接跳轉渲染，嚴禁在迴圈中呼叫 flyTo / easeTo 避免佇列打架跳動
+      map.jumpTo({
+        center: [camState.curLng, camState.curLat],
+        zoom: camState.curZoom,
+        pitch: camState.curPitch,
+        bearing: camState.curBearing
+      });
+    }
+
+    // ============================================================================
+    // 【核心函數 2】自動觸發地名彈出文字 (popupCheck - Geo-fencing Popups)
+    // ============================================================================
+    function popupCheck(curLng, curLat, curEle) {
+      if (!map) return;
+
+      let matchedSpot = null;
+      let minDistanceM = Infinity;
+
+      // 1. 遍歷火山口聖跡景點陣列，檢測是否進入 50-80 公尺半徑內
+      for (const spot of CRATER_WAYPOINTS) {
+        const distMeters = haversineKm(curLng, curLat, spot.lng, spot.lat) * 1000;
+        const triggerRadius = spot.radius || 75;
+
+        if (distMeters <= triggerRadius && distMeters < minDistanceM) {
+          minDistanceM = distMeters;
+          matchedSpot = spot;
+        }
+      }
+
+      // 2. 針對位於火山口深處中心的「大內院」(138.7314, 35.3627)：
+      // 當登山者行經火山口北側環線觀景區段且未與其他景點重疊時，自動於火山口正中央觸發「大內院」彈窗
+      if (!matchedSpot && curEle >= 3720 && curLat > 35.3655 && Math.abs(curLng - 138.7314) < 0.0020) {
+        matchedSpot = CRATER_WAYPOINTS.find(w => w.id === 'dainaiin');
+        minDistanceM = Math.round(haversineKm(curLng, curLat, matchedSpot.lng, matchedSpot.lat) * 1000);
+      }
+
+      // 3. 觸發或移除 Popup
+      if (matchedSpot) {
+        if (activeWaypointId !== matchedSpot.id) {
+          if (activeWaypointPopup) {
+            activeWaypointPopup.remove();
+          }
+          activeWaypointId = matchedSpot.id;
+
+          activeWaypointPopup = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: [0, -16],
+            className: 'crater-geo-popup'
+          })
+            .setLngLat([matchedSpot.lng, matchedSpot.lat])
+            .setHTML(`
+              <div class="geo-popup-inner">
+                <div class="geo-popup-badge">📍 MT. FUJI SACRED SPOT</div>
+                <div class="geo-popup-title">${matchedSpot.name}</div>
+                ${matchedSpot.desc ? `<div class="geo-popup-desc">${matchedSpot.desc}</div>` : ''}
+                <div class="geo-popup-dist">距離當前位置：約 ${Math.round(minDistanceM)}m</div>
+              </div>
+            `)
+            .addTo(map);
+        } else if (activeWaypointPopup) {
+          // 更新即時距離數值
+          const distEl = activeWaypointPopup.getElement()?.querySelector('.geo-popup-dist');
+          if (distEl) {
+            distEl.textContent = `距離當前位置：約 ${Math.round(minDistanceM)}m`;
+          }
+        }
+      } else {
+        // 離開該範圍後平滑淡出並關閉 (popup.remove())
+        if (activeWaypointPopup) {
+          const popupEl = activeWaypointPopup.getElement();
+          const closingPopup = activeWaypointPopup;
+          activeWaypointPopup = null;
+          activeWaypointId = null;
+
+          if (popupEl) {
+            popupEl.classList.add('fade-out');
+            setTimeout(() => closingPopup.remove(), 280);
+          } else {
+            closingPopup.remove();
+          }
+        }
+      }
+    }
+
+    // 內建真實感吉田路線 + 精準串聯 8 大火山口聖跡的御鉢巡り環線
     function generateDefaultFujisanTrack() {
       const rawWaypoints = [
-        // 您提供的 GPX 真實五合目~六合目座標段
+        // 吉田路線五合目 ~ 六合目 (取自您提供的 Garmin GPX 真實軌跡點)
         [138.734166, 35.393024, 2305, "2026-08-20T02:40:50Z"],
         [138.735452, 35.392263, 2313, "2026-08-20T02:43:40Z"],
         [138.737688, 35.391313, 2312, "2026-08-20T02:48:06Z"],
@@ -816,31 +1123,30 @@
         [138.746348, 35.381732, 2553, "2026-08-20T04:02:45Z"],
         [138.746006, 35.381226, 2580, "2026-08-20T04:06:09Z"],
         [138.745732, 35.381080, 2594, "2026-08-20T04:09:42Z"],
-        // 吉田路線七合目 ~ 九合目 ~ 久須志神社（之字形陡升段）
+        // 七合目 ~ 九合目
         [138.7448, 35.3788, 2650, "2026-08-20T04:28:00Z"],
         [138.7440, 35.3765, 2700, "2026-08-20T04:45:00Z"], // 七合目 2700m
         [138.7425, 35.3742, 2820, "2026-08-20T05:10:00Z"],
         [138.7412, 35.3720, 2950, "2026-08-20T05:35:00Z"],
         [138.7392, 35.3695, 3100, "2026-08-20T06:05:00Z"], // 八合目 3100m
-        [138.7381, 35.3680, 3280, "2026-08-20T06:40:00Z"],
-        [138.7372, 35.3666, 3450, "2026-08-20T07:15:00Z"],
-        [138.7360, 35.3652, 3600, "2026-08-20T07:50:00Z"], // 九合目 3600m
-        [138.7345, 35.3642, 3710, "2026-08-20T08:20:00Z"], // 久須志神社 (吉田山頂終點) 3710m
-        // 御鉢巡り（火山口環線，繞行 CRATER_CENTER: 138.7314, 35.3627）
-        [138.7352, 35.3622, 3720, "2026-08-20T08:30:00Z"],
-        [138.7348, 35.3598, 3735, "2026-08-20T08:42:00Z"],
-        [138.7325, 35.3586, 3750, "2026-08-20T08:55:00Z"], // 淺間大社奧宮
-        [138.7295, 35.3589, 3762, "2026-08-20T09:08:00Z"],
-        [138.7274, 35.3606, 3776, "2026-08-20T09:20:00Z"], // ▲最高峰劍峰 3776m
-        [138.7268, 35.3632, 3758, "2026-08-20T09:35:00Z"],
-        [138.7282, 35.3656, 3742, "2026-08-20T09:48:00Z"],
-        [138.7312, 35.3664, 3728, "2026-08-20T10:00:00Z"],
-        [138.7345, 35.3642, 3715, "2026-08-20T10:15:00Z"]  // 完成火山口環線回到久須志神社
+        [138.7382, 35.3688, 3320, "2026-08-20T06:45:00Z"],
+        [138.7375, 35.3684, 3480, "2026-08-20T07:20:00Z"],
+        [138.7368, 35.3682, 3600, "2026-08-20T07:50:00Z"], // 九合目 3600m
+        // 進入山頂與御鉢巡り（精準經過您指定的火山口聖跡座標）
+        [138.7360, 35.3675, 3710, "2026-08-20T08:20:00Z"], // 1. 久須志神社 (3,710m)
+        [138.7365, 35.3650, 3725, "2026-08-20T08:32:00Z"], // 2. 成就岳
+        [138.7355, 35.3615, 3732, "2026-08-20T08:45:00Z"], // 3. 伊豆岳
+        [138.7335, 35.3585, 3740, "2026-08-20T08:58:00Z"], // 4. 朝日岳
+        [138.7295, 35.3575, 3722, "2026-08-20T09:12:00Z"], // 5. 御殿場口・富士宮口頂上
+        [138.7275, 35.3606, 3776, "2026-08-20T09:28:00Z"], // 6. ▲ 劍峰 (3,776m)
+        [138.7262, 35.3635, 3760, "2026-08-20T09:42:00Z"],
+        [138.7265, 35.3665, 3756, "2026-08-20T09:55:00Z"], // 7. 白山岳
+        [138.7314, 35.3672, 3735, "2026-08-20T10:08:00Z"], // 8. 俯瞰大內院北緣觀景段
+        [138.7360, 35.3675, 3715, "2026-08-20T10:20:00Z"]  // 回到久須志神社完成環線
       ];
 
-      // 進行平滑插值產生約 450 個高密度軌跡點
       const interpolated = [];
-      const stepsPerSeg = 14;
+      const stepsPerSeg = 18;
       for (let i = 0; i < rawWaypoints.length - 1; i++) {
         const p1 = rawWaypoints[i];
         const p2 = rawWaypoints[i + 1];
@@ -879,7 +1185,7 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // 計算方位角 Bearing
+    // 計算兩點方位角 Bearing (-180 ~ 180)
     function calcBearing(lng1, lat1, lng2, lat2) {
       const toRad = d => d * Math.PI / 180;
       const toDeg = r => r * 180 / Math.PI;
@@ -888,7 +1194,7 @@
       const x =
         Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
         Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
-      return (toDeg(Math.atan2(y, x)) + 360) % 360;
+      return toDeg(Math.atan2(y, x));
     }
 
     // 為軌跡點計算累計距離、累計爬升、坡度
@@ -982,8 +1288,15 @@
         setupTrackLayers();
         setupMarkers();
         initElevationChart();
+        syncCamStateFromMap(true);
         updateDashboardAt(0, false);
       });
+
+      // 當使用者手動用滑鼠拖曳視角時，同步更新 camState 防止畫面跳回
+      map.on('drag', () => syncCamStateFromMap(true));
+      map.on('pitch', () => syncCamStateFromMap(false));
+      map.on('rotate', () => syncCamStateFromMap(false));
+      map.on('zoom', () => syncCamStateFromMap(false));
 
       map.on('move', () => {
         document.getElementById('valBearing').textContent = `${Math.round(map.getBearing())}°`;
@@ -1012,7 +1325,6 @@
         }
       });
 
-      // 未走過的路段：灰色基底線
       map.addLayer({
         id: 'full-track-casing',
         type: 'line',
@@ -1037,7 +1349,6 @@
         }
       });
 
-      // 已走過的路段：外層發光光暈
       map.addLayer({
         id: 'active-track-glow',
         type: 'line',
@@ -1051,7 +1362,6 @@
         }
       });
 
-      // 已走過的路段：粗體漸層橘色 3D 緞帶感軌跡
       map.addLayer({
         id: 'active-track-ribbon',
         type: 'line',
@@ -1071,24 +1381,31 @@
       });
     }
 
-    // 建立 3D 浮動標籤 (Marker) 與關鍵地標
+    // 建立 3D 浮動標籤 (Marker) 與山頂聖跡光點
     function setupMarkers() {
-      const pois = [
+      const stationPois = [
         { name: '五合目 2,305m', lng: 138.7342, lat: 35.3930 },
         { name: '六合目 2,390m', lng: 138.7467, lat: 35.3856 },
         { name: '七合目 2,700m', lng: 138.7440, lat: 35.3765 },
         { name: '八合目 3,100m', lng: 138.7392, lat: 35.3695 },
-        { name: '九合目 3,600m', lng: 138.7360, lat: 35.3652 },
-        { name: '久須志神社 3,710m', lng: 138.7345, lat: 35.3642 },
-        { name: '▲劍峰 3,776m', lng: 138.7274, lat: 35.3606 }
+        { name: '九合目 3,600m', lng: 138.7368, lat: 35.3682 }
       ];
 
-      pois.forEach(poi => {
+      stationPois.forEach(poi => {
         const el = document.createElement('div');
         el.className = 'poi-marker';
         el.textContent = poi.name;
         new mapboxgl.Marker({ element: el, anchor: 'bottom', offset: [0, -6] })
           .setLngLat([poi.lng, poi.lat])
+          .addTo(map);
+      });
+
+      // 為山頂 8 大聖跡加上精緻綠光定位點（接近時會自動彈出 3D Popup）
+      CRATER_WAYPOINTS.forEach(spot => {
+        const dot = document.createElement('div');
+        dot.className = 'poi-dot-crater';
+        new mapboxgl.Marker({ element: dot, anchor: 'center' })
+          .setLngLat([spot.lng, spot.lat])
           .addTo(map);
       });
 
@@ -1122,7 +1439,6 @@
       gradient.addColorStop(0, 'rgba(0, 255, 136, 0.45)');
       gradient.addColorStop(1, 'rgba(0, 255, 136, 0.02)');
 
-      // 垂直進度指示線 Plugin
       const verticalLinePlugin = {
         id: 'verticalCursorLine',
         afterDraw(chart) {
@@ -1208,16 +1524,17 @@
         plugins: [verticalLinePlugin]
       });
 
-      // 滑鼠滑過或拖曳圖表時，同步連動 3D 地圖上的登山位置
       const canvas = document.getElementById('elevationChart');
       let isDraggingChart = false;
 
       const syncFromChartEvent = (evt) => {
         const points = elevationChart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
         if (points.length > 0) {
-          const idx = points[0].index;
-          currentFloatIndex = idx;
+          currentFloatIndex = points[0].index;
           updateDashboardAt(currentFloatIndex, true);
+          if (!isPlaying && lockHiker) {
+            smoothCameraLoopManualStep();
+          }
         }
       };
 
@@ -1235,7 +1552,22 @@
       });
     }
 
-    // 格式化行程時間 HH:MM:SS
+    // 當暫停狀態下拖曳進度條或圖表時的即時平滑跟隨
+    function smoothCameraLoopManualStep() {
+      if (!map || !lockHiker) return;
+      camState.curLng = lerp(camState.curLng, camState.targetLng, 0.25);
+      camState.curLat = lerp(camState.curLat, camState.targetLat, 0.25);
+      camState.curZoom = lerp(camState.curZoom, camState.targetZoom, 0.2);
+      camState.curPitch = lerp(camState.curPitch, camState.targetPitch, 0.2);
+      camState.curBearing = lerpAngle(camState.curBearing, camState.targetBearing, 0.2);
+      map.jumpTo({
+        center: [camState.curLng, camState.curLat],
+        zoom: camState.curZoom,
+        pitch: camState.curPitch,
+        bearing: camState.curBearing
+      });
+    }
+
     function formatDuration(ms) {
       if (!ms || ms < 0) return '00:00:00';
       const totalSec = Math.floor(ms / 1000);
@@ -1245,8 +1577,10 @@
       return `${hrs}:${mins}:${secs}`;
     }
 
-    // 核心更新函式：根據當前軌跡索引更新 3D 軌跡、Marker、數據面板與火山口自動視角
-    function updateDashboardAt(floatIdx, allowCameraFollow = true) {
+    // ============================================================================
+    // 核心數據更新函式：僅更新 UI、Geo-fencing 與「目標相機參數」，絕不直接呼叫 flyTo/easeTo
+    // ============================================================================
+    function updateDashboardAt(floatIdx, updateTargetCamera = true) {
       if (!trackPoints.length || !map) return;
 
       const maxIdx = trackPoints.length - 1;
@@ -1258,7 +1592,6 @@
       const p1 = trackPoints[baseIdx];
       const p2 = trackPoints[nextIdx];
 
-      // 線性插值計算當前平滑位置與數據
       const curLng = p1.lng + (p2.lng - p1.lng) * ratio;
       const curLat = p1.lat + (p2.lat - p1.lat) * ratio;
       const curEle = p1.ele + (p2.ele - p1.ele) * ratio;
@@ -1269,9 +1602,7 @@
       // 1. 更新動態橘色漸層 3D 軌跡
       const activeCoords = trackPoints.slice(0, baseIdx + 1).map(p => [p.lng, p.lat]);
       activeCoords.push([curLng, curLat]);
-      if (activeCoords.length === 1) {
-        activeCoords.push([curLng, curLat]);
-      }
+      if (activeCoords.length === 1) activeCoords.push([curLng, curLat]);
 
       const activeSource = map.getSource('active-track');
       if (activeSource) {
@@ -1295,7 +1626,10 @@
         }
       }
 
-      // 3. 更新下方數據儀表板與進度條
+      // 3. 執行火山口聖跡地理圍欄檢測 (Geo-fencing Popups)
+      popupCheck(curLng, curLat, curEle);
+
+      // 4. 更新下方數據儀表板與進度條
       const pct = maxIdx > 0 ? (clampedIdx / maxIdx) * 100 : 0;
       document.getElementById('progressSlider').value = Math.round((clampedIdx / maxIdx) * 1000);
       document.getElementById('progressText').textContent = `${pct.toFixed(1)}%`;
@@ -1309,65 +1643,60 @@
       if (trackPoints[0].time && p1.time) {
         elapsedMs = p1.time.getTime() - trackPoints[0].time.getTime();
       } else {
-        // 若 GPX 無時間戳，依比例推估行程時間
         elapsedMs = (clampedIdx / maxIdx) * 7.5 * 3600 * 1000;
       }
       document.getElementById('statTime').textContent = formatDuration(elapsedMs);
 
-      // 高亮對應的頂部高度標籤
       highlightStationPill(curEle);
 
-      // 4. 更新垂直高程剖面圖游標
       if (elevationChart) {
         elevationChart.update('none');
       }
 
-      // 5. 【核心要求：🌋 火山口自動與手動特殊視角控制邏輯】
+      // 5. 更新「目標相機狀態 (camState.target*)」，交由 smoothCameraLoop 每影格 Lerp 渲染
       const badgeEl = document.getElementById('cameraModeBadge');
       const craterBtn = document.getElementById('btnCraterView');
 
       if (curEle >= 3700) {
-        // 當海拔高於 3,700m（進入御鉢巡り火山口環線路段），自動切換為「火山口深度俯瞰模式」
         if (!craterModeActive) {
           craterModeActive = true;
-          badgeEl.textContent = '🌋 火山口深度俯瞰模式（360° 環繞導覽）';
+          badgeEl.textContent = '🌋 火山口無人機環繞模式 (Pitch 60° / Lerp 0.05)';
           badgeEl.classList.add('crater-mode');
           craterBtn.classList.add('active');
         }
 
-        if (allowCameraFollow && lockHiker) {
-          // 強制將地圖中心點鎖定在火山口正中央 (138.7314, 35.3627)，並隨著登山者繞行火山口進行 360 度平滑旋轉
-          const angleFromCrater = calcBearing(CRATER_CENTER[0], CRATER_CENTER[1], curLng, curLat);
-          map.easeTo({
-            center: CRATER_CENTER,
-            zoom: 15.15,
-            pitch: 60,
-            bearing: (angleFromCrater + 110) % 360,
-            duration: 120,
-            easing: t => t
-          });
+        if (updateTargetCamera && lockHiker) {
+          // 鎖定目標點在火山口中心 (138.7314, 35.3627)
+          camState.targetLng = CRATER_CENTER[0];
+          camState.targetLat = CRATER_CENTER[1];
+          camState.targetZoom = 15.15;
+          // 保持 Pitch 穩定在 60 度 (55~65度之間)
+          camState.targetPitch = 60;
+
+          // 計算火山口中心指向當前登山者的方位角，加上切線偏移角營造立體側拍環繞感
+          const radialBearing = calcBearing(CRATER_CENTER[0], CRATER_CENTER[1], curLng, curLat);
+          camState.targetBearing = radialBearing + 115;
         }
       } else {
         if (craterModeActive && isPlaying) {
           craterModeActive = false;
-          badgeEl.textContent = '目前模式：登山軌跡跟隨視角';
+          badgeEl.textContent = '目前模式：登山軌跡平滑跟隨';
           badgeEl.classList.remove('crater-mode');
           craterBtn.classList.remove('active');
         }
 
-        if (allowCameraFollow && lockHiker && !craterModeActive) {
-          map.easeTo({
-            center: [curLng, curLat],
-            pitch: Math.max(55, map.getPitch()),
-            bearing: map.getBearing() + (autoOrbit ? 0.25 : 0),
-            duration: 100,
-            easing: t => t
-          });
+        if (updateTargetCamera && lockHiker && !craterModeActive) {
+          camState.targetLng = curLng;
+          camState.targetLat = curLat;
+          camState.targetZoom = 14.3;
+          camState.targetPitch = 60;
+          if (autoOrbit) {
+            camState.targetBearing += 0.35;
+          }
         }
       }
     }
 
-    // 根據海拔高亮頂部合目標籤
     function highlightStationPill(ele) {
       const pills = document.querySelectorAll('.station-pill');
       let activePill = pills[0];
@@ -1381,26 +1710,33 @@
       if (activePill) activePill.classList.add('active');
     }
 
-    // 動畫播放迴圈
+    // ============================================================================
+    // 主渲染迴圈 (requestAnimationFrame)
+    // ============================================================================
     function animationLoop(timestamp) {
-      if (! lastFrameTime) lastFrameTime = timestamp;
-      const dt = (timestamp - lastFrameTime) / 1000;
+      if (!lastFrameTime) lastFrameTime = timestamp;
+      const dt = Math.min(0.1, (timestamp - lastFrameTime) / 1000);
       lastFrameTime = timestamp;
 
       if (isPlaying && trackPoints.length > 1) {
-        // 基準速度：1x 時約 45 秒走完全程
-        const basePointsPerSec = trackPoints.length / 45;
+        // 基準速度：1x 時約 55 秒走完全程，讓山頂環線有充足時間欣賞彈窗與環繞運鏡
+        const basePointsPerSec = trackPoints.length / 55;
         currentFloatIndex += basePointsPerSec * playSpeed * dt;
 
         if (currentFloatIndex >= trackPoints.length - 1) {
           currentFloatIndex = trackPoints.length - 1;
           updateDashboardAt(currentFloatIndex, true);
+          smoothCameraLoop();
           togglePlayPause(false);
         } else {
           updateDashboardAt(currentFloatIndex, true);
+          // 在每影格中執行 Lerp 無人機絲滑運鏡
+          smoothCameraLoop();
         }
       } else if (autoOrbit && map) {
-        map.rotateTo((map.getBearing() + 12 * dt) % 360, { duration: 0 });
+        const nextBearing = map.getBearing() + 12 * dt;
+        map.jumpTo({ bearing: nextBearing });
+        syncCamStateFromMap(true);
       }
 
       requestAnimationFrame(animationLoop);
@@ -1410,6 +1746,8 @@
       isPlaying = typeof forceState === 'boolean' ? forceState : !isPlaying;
       const btn = document.getElementById('btnPlayPause');
       if (isPlaying) {
+        // 開始播放前先同步目前相機姿態至 Lerp 起點，確保從任何視角切入都絲滑無跳動
+        syncCamStateFromMap(false);
         if (currentFloatIndex >= trackPoints.length - 1) {
           currentFloatIndex = 0;
         }
@@ -1471,7 +1809,6 @@
           currentFloatIndex = 0;
           togglePlayPause(false);
 
-          // 更新地圖基底軌跡
           const fullCoords = trackPoints.map(p => [p.lng, p.lat]);
           if (map && map.getSource('full-track')) {
             map.getSource('full-track').setData({
@@ -1480,7 +1817,6 @@
             });
           }
 
-          // 更新高度剖面圖
           if (elevationChart) {
             elevationChart.data.labels = trackPoints.map(p => `${p.distKm.toFixed(2)} km`);
             elevationChart.data.datasets[0].data = trackPoints.map(p => Math.round(p.ele));
@@ -1492,14 +1828,14 @@
 
           updateDashboardAt(0, false);
 
-          // 飛越至上傳的軌跡起點
           map.flyTo({
             center: [trackPoints[0].lng, trackPoints[0].lat],
             zoom: 14.2,
-            pitch: 62,
+            pitch: 60,
             bearing: -145,
             duration: 1800
           });
+          map.once('moveend', () => syncCamStateFromMap(true));
         } catch (err) {
           console.error(err);
           alert('GPX 解析失敗，請確認檔案格式正確。');
@@ -1532,33 +1868,51 @@
       const ratio = parseFloat(e.target.value) / 1000;
       currentFloatIndex = ratio * (trackPoints.length - 1);
       updateDashboardAt(currentFloatIndex, true);
+      if (!isPlaying && lockHiker) {
+        smoothCameraLoopManualStep();
+      }
     });
 
-    // 右側相機控制按鈕
-    document.getElementById('btnZoomIn').addEventListener('click', () => map && map.zoomIn({ duration: 300 }));
-    document.getElementById('btnZoomOut').addEventListener('click', () => map && map.zoomOut({ duration: 300 }));
+    // 右側相機手動微調按鈕
+    document.getElementById('btnZoomIn').addEventListener('click', () => {
+      if (!map) return;
+      camState.targetZoom = Math.min(18, camState.curZoom + 0.6);
+      if (!isPlaying) map.easeTo({ zoom: camState.targetZoom, duration: 300 });
+    });
+    document.getElementById('btnZoomOut').addEventListener('click', () => {
+      if (!map) return;
+      camState.targetZoom = Math.max(10, camState.curZoom - 0.6);
+      if (!isPlaying) map.easeTo({ zoom: camState.targetZoom, duration: 300 });
+    });
     document.getElementById('btnRotateLeft').addEventListener('click', () => {
-      if (map) map.easeTo({ bearing: map.getBearing() - 25, duration: 350 });
+      if (!map) return;
+      camState.targetBearing = camState.curBearing - 25;
+      if (!isPlaying) map.easeTo({ bearing: camState.targetBearing, duration: 350 });
     });
     document.getElementById('btnRotateRight').addEventListener('click', () => {
-      if (map) map.easeTo({ bearing: map.getBearing() + 25, duration: 350 });
+      if (!map) return;
+      camState.targetBearing = camState.curBearing + 25;
+      if (!isPlaying) map.easeTo({ bearing: camState.targetBearing, duration: 350 });
     });
     document.getElementById('btnPitchUp').addEventListener('click', () => {
-      if (map) map.easeTo({ pitch: Math.min(80, map.getPitch() + 8), duration: 300 });
+      if (!map) return;
+      camState.targetPitch = Math.min(65, camState.curPitch + 5);
+      if (!isPlaying) map.easeTo({ pitch: camState.targetPitch, duration: 300 });
     });
     document.getElementById('btnPitchDown').addEventListener('click', () => {
-      if (map) map.easeTo({ pitch: Math.max(0, map.getPitch() - 8), duration: 300 });
+      if (!map) return;
+      camState.targetPitch = Math.max(55, camState.curPitch - 5);
+      if (!isPlaying) map.easeTo({ pitch: camState.targetPitch, duration: 300 });
     });
 
-    // 鎖定登山位置切換
     document.getElementById('btnLockHiker').addEventListener('click', (e) => {
       lockHiker = !lockHiker;
       const btn = e.currentTarget;
       btn.classList.toggle('active-toggle', lockHiker);
       btn.textContent = `📍 鎖定登山位置：${lockHiker ? '開啟' : '關閉'}`;
+      if (lockHiker) syncCamStateFromMap(false);
     });
 
-    // 自動環繞切換
     document.getElementById('btnAutoOrbit').addEventListener('click', (e) => {
       autoOrbit = !autoOrbit;
       const btn = e.currentTarget;
@@ -1566,19 +1920,17 @@
       btn.textContent = `🔄 自動環繞：${autoOrbit ? '開啟' : '關閉'}`;
     });
 
-    // 重置視角
     document.getElementById('btnResetView').addEventListener('click', () => {
       craterModeActive = false;
+      togglePlayPause(false);
       document.getElementById('btnCraterView').classList.remove('active');
       const badgeEl = document.getElementById('cameraModeBadge');
-      badgeEl.textContent = '目前模式：登山軌跡跟隨視角';
+      badgeEl.textContent = '目前模式：登山軌跡平滑跟隨';
       badgeEl.classList.remove('crater-mode');
 
       if (map) {
-        map.flyTo({
-          ...INITIAL_CAMERA,
-          duration: 1800
-        });
+        map.flyTo({ ...INITIAL_CAMERA, duration: 1800 });
+        map.once('moveend', () => syncCamStateFromMap(true));
       }
     });
 
@@ -1589,28 +1941,34 @@
       const craterBtn = document.getElementById('btnCraterView');
       const badgeEl = document.getElementById('cameraModeBadge');
       craterBtn.classList.add('active');
-      badgeEl.textContent = '🌋 火山口深度俯瞰模式（手動鎖定火山口中心）';
+      badgeEl.textContent = '🌋 火山口無人機環繞模式 (Pitch 60° / Lerp 0.05)';
       badgeEl.classList.add('crater-mode');
 
-      // 立即以 flyTo 平滑飛越到火山口正中央 (138.7314, 35.3627) 俯瞰整個富士山頂環線
-      map.flyTo({
-        center: CRATER_CENTER,
-        zoom: 15.2,
-        pitch: 62,
-        bearing: -35,
-        duration: 2400,
-        essential: true
-      });
+      camState.targetLng = CRATER_CENTER[0];
+      camState.targetLat = CRATER_CENTER[1];
+      camState.targetZoom = 15.15;
+      camState.targetPitch = 60;
+
+      if (!isPlaying) {
+        map.flyTo({
+          center: CRATER_CENTER,
+          zoom: 15.15,
+          pitch: 60,
+          bearing: camState.curBearing,
+          duration: 2000,
+          essential: true
+        });
+        map.once('moveend', () => syncCamStateFromMap(false));
+      }
     });
 
-    // 點擊右上角合目標籤快速飛越並跳轉至對應海拔進度
+    // 點擊頂部合目標籤快速跳轉至該區段（例如點擊「久須志神社」可直接測試山頂火山口環繞與自動彈窗）
     document.querySelectorAll('.station-pill').forEach(pill => {
       pill.addEventListener('click', () => {
         const targetElev = parseFloat(pill.dataset.elev);
         const lng = parseFloat(pill.dataset.lng);
         const lat = parseFloat(pill.dataset.lat);
 
-        // 找到軌跡中最接近該海拔的索引點
         let bestIdx = 0;
         let minDiff = Infinity;
         trackPoints.forEach((pt, idx) => {
@@ -1622,25 +1980,32 @@
         });
 
         currentFloatIndex = bestIdx;
-        updateDashboardAt(currentFloatIndex, false);
+        updateDashboardAt(currentFloatIndex, true);
 
         if (map) {
-          if (targetElev >= 3700) {
-            map.flyTo({
-              center: CRATER_CENTER,
-              zoom: 15.15,
-              pitch: 60,
-              bearing: calcBearing(CRATER_CENTER[0], CRATER_CENTER[1], lng, lat) + 110,
-              duration: 1800
-            });
-          } else {
-            map.flyTo({
-              center: [trackPoints[bestIdx].lng, trackPoints[bestIdx].lat],
-              zoom: 14.6,
-              pitch: 62,
-              duration: 1500
-            });
-          }
+          const destCenter = targetElev >= 3700 ? CRATER_CENTER : [trackPoints[bestIdx].lng, trackPoints[bestIdx].lat];
+          const destZoom = targetElev >= 3700 ? 15.15 : 14.5;
+          const destBearing = targetElev >= 3700
+            ? calcBearing(CRATER_CENTER[0], CRATER_CENTER[1], lng, lat) + 115
+            : camState.curBearing;
+
+          camState.curLng = destCenter[0];
+          camState.curLat = destCenter[1];
+          camState.curZoom = destZoom;
+          camState.curPitch = 60;
+          camState.curBearing = destBearing;
+          camState.targetLng = destCenter[0];
+          camState.targetLat = destCenter[1];
+          camState.targetZoom = destZoom;
+          camState.targetPitch = 60;
+          camState.targetBearing = destBearing;
+
+          map.jumpTo({
+            center: destCenter,
+            zoom: destZoom,
+            pitch: 60,
+            bearing: destBearing
+          });
         }
       });
     });
