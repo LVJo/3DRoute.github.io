@@ -1,1 +1,1666 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FUJISAN 3D INTERACTIVE - 富士山攻頂・吉田路線 ＆ 御鉢巡り全長線</title>
 
+  <!-- Mapbox GL JS v3 -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Mapbox toGeoJSON -->
+  <script src="https://unpkg.com/@mapbox/togeojson@0.16.0/togeojson.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-dark: #070b12;
+      --glass-bg: rgba(12, 18, 28, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.14);
+      --neon-green: #00ff88;
+      --neon-green-dim: rgba(0, 255, 136, 0.2);
+      --neon-orange: #ff6b00;
+      --neon-orange-light: #ff9e00;
+      --text-white: #f0f6fc;
+      --text-muted: #8b949e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      font-family: 'Noto Sans TC', sans-serif;
+      color: var(--text-white);
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* 玻璃擬物共用樣式 */
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+      z-index: 10;
+    }
+
+    /* 1. 頂部標題與狀態欄 */
+    .top-bar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .title-box {
+      pointer-events: auto;
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-left: 4px solid var(--neon-orange);
+    }
+
+    .title-header-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-orange {
+      background: linear-gradient(90deg, var(--neon-orange), #ff3d00);
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 4px;
+      letter-spacing: 1.2px;
+      box-shadow: 0 0 12px rgba(255, 107, 0, 0.5);
+    }
+
+    .upload-btn {
+      background: rgba(0, 255, 136, 0.15);
+      border: 1px solid var(--neon-green);
+      color: var(--neon-green);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .upload-btn:hover {
+      background: var(--neon-green);
+      color: #000;
+      box-shadow: 0 0 12px var(--neon-green);
+    }
+
+    .main-title {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    /* 右上角關鍵地點高度標籤列 */
+    .stations-bar {
+      pointer-events: auto;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 68%;
+    }
+
+    .station-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-white);
+      cursor: pointer;
+      transition: all 0.25s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .station-pill span.elev {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-green);
+      font-size: 11px;
+    }
+
+    .station-pill:hover, .station-pill.active {
+      background: rgba(255, 107, 0, 0.22);
+      border-color: var(--neon-orange);
+      transform: translateY(-1px);
+      box-shadow: 0 0 12px rgba(255, 107, 0, 0.4);
+    }
+
+    .station-pill.peak {
+      border-color: rgba(0, 255, 136, 0.5);
+      background: rgba(0, 255, 136, 0.1);
+    }
+
+    .station-arrow {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    /* 2. 右側視角與播放控制面板 */
+    .right-panel {
+      position: absolute;
+      top: 105px;
+      right: 16px;
+      width: 240px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--neon-green);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 6px;
+    }
+
+    .cam-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-white);
+      border-radius: 6px;
+      padding: 7px 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    .ctrl-btn:active {
+      transform: scale(0.97);
+    }
+
+    .ctrl-btn.active-toggle {
+      background: var(--neon-green-dim);
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    .cam-readout {
+      display: flex;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+    }
+
+    .cam-readout .val {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-orange-light);
+      font-weight: 700;
+    }
+
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* 特殊視角鈕：火山口環繞視角 */
+    .crater-special-btn {
+      background: linear-gradient(135deg, rgba(255, 107, 0, 0.28), rgba(255, 42, 0, 0.45));
+      border: 1px solid var(--neon-orange);
+      color: #fff;
+      font-weight: 700;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 0 15px rgba(255, 107, 0, 0.35);
+    }
+
+    .crater-special-btn:hover, .crater-special-btn.active {
+      background: linear-gradient(135deg, var(--neon-orange), #ff2a00);
+      box-shadow: 0 0 22px rgba(255, 107, 0, 0.8);
+      transform: translateY(-1px);
+    }
+
+    .mode-indicator {
+      font-size: 11px;
+      text-align: center;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--neon-green);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .mode-indicator.crater-mode {
+      background: rgba(255, 107, 0, 0.2);
+      color: var(--neon-orange-light);
+      border-color: var(--neon-orange);
+      animation: pulse-orange 1.8s infinite;
+    }
+
+    @keyframes pulse-orange {
+      0%, 100% { box-shadow: 0 0 4px rgba(255, 107, 0, 0.3); }
+      50% { box-shadow: 0 0 14px rgba(255, 107, 0, 0.8); }
+    }
+
+    /* 3. 下方數據儀表板與高度剖面圖 */
+    .bottom-dashboard {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      height: 195px;
+      padding: 14px 20px;
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 20px;
+    }
+
+    .left-controls-stats {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .play-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-play {
+      background: var(--neon-green);
+      color: #05100a;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 14px rgba(0, 255, 136, 0.45);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-play:hover {
+      background: #33ff9f;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+    }
+
+    .btn-replay {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--text-white);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-replay:hover {
+      border-color: var(--neon-orange);
+      color: var(--neon-orange-light);
+    }
+
+    .speed-group {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .speed-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: var(--text-muted);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .speed-btn.active {
+      background: rgba(255, 107, 0, 0.25);
+      border-color: var(--neon-orange);
+      color: #fff;
+    }
+
+    /* 進度條時間軸 */
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 4px 0;
+    }
+
+    .progress-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .progress-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--neon-orange);
+      border: 2px solid #fff;
+      box-shadow: 0 0 12px var(--neon-orange);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .progress-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    .progress-pct {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      color: var(--neon-orange-light);
+      min-width: 48px;
+      text-align: right;
+    }
+
+    /* 5個數據欄 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--neon-green);
+    }
+
+    .stat-value.orange {
+      color: var(--neon-orange-light);
+    }
+
+    .stat-unit {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-left: 2px;
+    }
+
+    /* 右下垂直高程剖面圖 */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .chart-header strong {
+      color: var(--neon-green);
+      letter-spacing: 0.5px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+    }
+
+    /* 3D 浮動標籤 (Marker) */
+    .hiker-3d-marker {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .hiker-label-box {
+      background: rgba(10, 15, 24, 0.88);
+      border: 1.5px solid var(--neon-orange);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), 0 0 12px rgba(255, 107, 0, 0.5);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hiker-label-box .elev-text {
+      color: var(--neon-green);
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .hiker-label-box .slope-text {
+      color: var(--neon-orange-light);
+    }
+
+    .hiker-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--neon-orange);
+      border: 3px solid #fff;
+      box-shadow: 0 0 16px var(--neon-orange), 0 0 30px #ff3d00;
+    }
+
+    /* 地標點小標籤 */
+    .poi-marker {
+      background: rgba(7, 11, 18, 0.8);
+      border: 1px solid rgba(0, 255, 136, 0.6);
+      color: var(--text-white);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    /* Mapbox Token 提示對話框 */
+    .token-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .token-box {
+      width: 460px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .token-box h3 {
+      color: var(--neon-orange);
+      font-size: 18px;
+    }
+
+    .token-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .token-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--neon-green);
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+
+    @media (max-width: 1100px) {
+      .top-bar { flex-direction: column; }
+      .stations-bar { max-width: 100%; }
+      .bottom-dashboard { grid-template-columns: 1fr; height: auto; }
+      .canvas-wrap { height: 110px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D 地圖容器 -->
+  <div id="map"></div>
+
+  <!-- 1. 頂部標題與狀態欄 -->
+  <div class="top-bar">
+    <div class="title-box glass-panel">
+      <div class="title-header-row">
+        <span class="badge-orange">FUJISAN - 3D INTERACTIVE</span>
+        <label class="upload-btn" for="gpxFileInput">
+          📂 上傳 GPX 軌跡檔
+        </label>
+        <input type="file" id="gpxFileInput" accept=".gpx,application/gpx+xml,text/xml" style="display:none" />
+      </div>
+      <div class="main-title">富士山攻頂・吉田路線 ＆ 御鉢巡り全長線</div>
+    </div>
+
+    <div class="stations-bar glass-panel" id="stationsBar">
+      <div class="station-pill" data-elev="2305" data-lng="138.7342" data-lat="35.3930">五合目 <span class="elev">2,305m</span></div>
+      <span class="station-arrow">➜</span>
+      <div class="station-pill" data-elev="2390" data-lng="138.7467" data-lat="35.3856">六合目 <span class="elev">2,390m</span></div>
+      <span class="station-arrow">➜</span>
+      <div class="station-pill" data-elev="2700" data-lng="138.7440" data-lat="35.3765">七合目 <span class="elev">2,700m</span></div>
+      <span class="station-arrow">➜</span>
+      <div class="station-pill" data-elev="3100" data-lng="138.7392" data-lat="35.3695">八合目 <span class="elev">3,100m</span></div>
+      <span class="station-arrow">➜</span>
+      <div class="station-pill" data-elev="3600" data-lng="138.7360" data-lat="35.3652">九合目 <span class="elev">3,600m</span></div>
+      <span class="station-arrow">➜</span>
+      <div class="station-pill" data-elev="3710" data-lng="138.7345" data-lat="35.3642">久須志神社(山頂終點) <span class="elev">3,710m</span></div>
+      <span class="station-arrow">➜</span>
+      <div class="station-pill peak" data-elev="3776" data-lng="138.7274" data-lat="35.3606">▲最高峰劍峰 <span class="elev">3,776m</span></div>
+    </div>
+  </div>
+
+  <!-- 2. 右側視角與播放控制面板 -->
+  <div class="right-panel glass-panel">
+    <div class="panel-title">
+      <span>CAMERA & VIEW 3D</span>
+      <span>🎮</span>
+    </div>
+
+    <div class="cam-grid">
+      <button class="ctrl-btn" id="btnZoomIn">➕ 放大</button>
+      <button class="ctrl-btn" id="btnZoomOut">➖ 縮小</button>
+      <button class="ctrl-btn" id="btnRotateLeft">↺ 左旋角度</button>
+      <button class="ctrl-btn" id="btnRotateRight">↻ 右旋角度</button>
+      <button class="ctrl-btn" id="btnPitchUp">🔼 調高俯角</button>
+      <button class="ctrl-btn" id="btnPitchDown">🔽 降低視角</button>
+    </div>
+
+    <div class="cam-readout">
+      <div>方位角 Bearing: <span class="val" id="valBearing">-145°</span></div>
+      <div>俯角 Pitch: <span class="val" id="valPitch">62°</span></div>
+    </div>
+
+    <div class="toggle-list">
+      <button class="ctrl-btn active-toggle" id="btnLockHiker">📍 鎖定登山位置：開啟</button>
+      <button class="ctrl-btn" id="btnAutoOrbit">🔄 自動環繞：關閉</button>
+      <button class="ctrl-btn" id="btnResetView">🧭 重置視角</button>
+    </div>
+
+    <button class="crater-special-btn" id="btnCraterView">
+      🌋 火山口環繞視角
+    </button>
+
+    <div class="mode-indicator" id="cameraModeBadge">
+      目前模式：登山軌跡跟隨視角
+    </div>
+  </div>
+
+  <!-- 3. 下方數據儀表板與高度剖面圖 -->
+  <div class="bottom-dashboard glass-panel">
+    <div class="left-controls-stats">
+      <div class="play-row">
+        <button class="btn-play" id="btnPlayPause">▶ 開始播放</button>
+        <button class="btn-replay" id="btnReplay">⟲ 重播</button>
+        <div class="speed-group">
+          <button class="speed-btn" data-speed="0.5">0.5x</button>
+          <button class="speed-btn active" data-speed="1">1x</button>
+          <button class="speed-btn" data-speed="2">2x</button>
+          <button class="speed-btn" data-speed="4">4x</button>
+        </div>
+      </div>
+
+      <div class="timeline-row">
+        <input type="range" id="progressSlider" class="progress-slider" min="0" max="1000" value="0" step="1" />
+        <div class="progress-pct" id="progressText">0.0%</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">累計距離</div>
+          <div><span class="stat-value" id="statDist">0.00</span><span class="stat-unit">km</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">當前海拔</div>
+          <div><span class="stat-value orange" id="statElev">2305</span><span class="stat-unit">m</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累計爬升</div>
+          <div><span class="stat-value" id="statAscent">0</span><span class="stat-unit">m</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">當前坡度</div>
+          <div><span class="stat-value orange" id="statSlope">0.0</span><span class="stat-unit">%</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">行程時間</div>
+          <div><span class="stat-value" id="statTime">00:00:00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-header">
+        <strong>📈 垂直高程剖面圖 (ELEVATION PROFILE)</strong>
+        <span id="trackSourceInfo">預設展示軌跡（支援滑鼠懸停與拖曳同步 3D 位置）</span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="elevationChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 若未設定 Token 時的快速輸入框 -->
+  <div class="token-modal" id="tokenModal">
+    <div class="token-box glass-panel">
+      <h3>🔑 請輸入 Mapbox Access Token</h3>
+      <p>
+        您尚未在程式碼第 325 行填入您的 <code>mapboxgl.accessToken</code>。<br/>
+        您可以直接在下方貼上您的 Mapbox Public Token (<code>pk.eyJ...</code>) 立即啟動 3D 富士山地形儀表板：
+      </p>
+      <input type="text" id="tokenInput" class="token-input" placeholder="pk.eyJ1Ijoi..." />
+      <button class="btn-play" id="btnSaveToken" style="justify-content:center;">啟動 3D 富士山儀表板</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // 【請在此處替換您的 Mapbox Access Token】
+    // ============================================================================
+    mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+
+    // 核心座標常數
+    const FUJI_CENTER = [138.7275, 35.3606]; // 富士山中心點
+    const CRATER_CENTER = [138.7314, 35.3627]; // 火山口正中央（御鉢巡り核心）
+    const INITIAL_CAMERA = {
+      center: [138.7365, 35.3740],
+      zoom: 13.3,
+      pitch: 62,
+      bearing: -145
+    };
+
+    // 狀態管理變數
+    let map = null;
+    let elevationChart = null;
+    let hikerMarker = null;
+    let hikerMarkerEl = null;
+
+    let trackPoints = []; // [{lng, lat, ele, time, distKm, ascent, slope}]
+    let currentFloatIndex = 0;
+    let isPlaying = false;
+    let playSpeed = 1;
+    let lockHiker = true;
+    let autoOrbit = false;
+    let craterModeActive = false;
+    let lastFrameTime = 0;
+
+    // 內建真實感吉田路線（取自您上傳的 Garmin GPX 前段 + 延伸至六~九合目與山頂御鉢巡り火山口環線）
+    function generateDefaultFujisanTrack() {
+      const rawWaypoints = [
+        // 您提供的 GPX 真實五合目~六合目座標段
+        [138.734166, 35.393024, 2305, "2026-08-20T02:40:50Z"],
+        [138.735452, 35.392263, 2313, "2026-08-20T02:43:40Z"],
+        [138.737688, 35.391313, 2312, "2026-08-20T02:48:06Z"],
+        [138.740542, 35.390410, 2294, "2026-08-20T02:52:30Z"],
+        [138.741855, 35.390163, 2286, "2026-08-20T02:55:04Z"],
+        [138.742987, 35.388386, 2311, "2026-08-20T03:01:18Z"],
+        [138.743835, 35.387481, 2336, "2026-08-20T03:04:46Z"],
+        [138.745805, 35.385903, 2377, "2026-08-20T03:16:08Z"],
+        [138.746677, 35.385653, 2390, "2026-08-20T03:18:23Z"], // 六合目 2390m
+        [138.747259, 35.385400, 2395, "2026-08-20T03:21:05Z"],
+        [138.747261, 35.383746, 2454, "2026-08-20T03:38:30Z"],
+        [138.746925, 35.382726, 2495, "2026-08-20T03:47:21Z"],
+        [138.746898, 35.382079, 2525, "2026-08-20T03:58:17Z"],
+        [138.746348, 35.381732, 2553, "2026-08-20T04:02:45Z"],
+        [138.746006, 35.381226, 2580, "2026-08-20T04:06:09Z"],
+        [138.745732, 35.381080, 2594, "2026-08-20T04:09:42Z"],
+        // 吉田路線七合目 ~ 九合目 ~ 久須志神社（之字形陡升段）
+        [138.7448, 35.3788, 2650, "2026-08-20T04:28:00Z"],
+        [138.7440, 35.3765, 2700, "2026-08-20T04:45:00Z"], // 七合目 2700m
+        [138.7425, 35.3742, 2820, "2026-08-20T05:10:00Z"],
+        [138.7412, 35.3720, 2950, "2026-08-20T05:35:00Z"],
+        [138.7392, 35.3695, 3100, "2026-08-20T06:05:00Z"], // 八合目 3100m
+        [138.7381, 35.3680, 3280, "2026-08-20T06:40:00Z"],
+        [138.7372, 35.3666, 3450, "2026-08-20T07:15:00Z"],
+        [138.7360, 35.3652, 3600, "2026-08-20T07:50:00Z"], // 九合目 3600m
+        [138.7345, 35.3642, 3710, "2026-08-20T08:20:00Z"], // 久須志神社 (吉田山頂終點) 3710m
+        // 御鉢巡り（火山口環線，繞行 CRATER_CENTER: 138.7314, 35.3627）
+        [138.7352, 35.3622, 3720, "2026-08-20T08:30:00Z"],
+        [138.7348, 35.3598, 3735, "2026-08-20T08:42:00Z"],
+        [138.7325, 35.3586, 3750, "2026-08-20T08:55:00Z"], // 淺間大社奧宮
+        [138.7295, 35.3589, 3762, "2026-08-20T09:08:00Z"],
+        [138.7274, 35.3606, 3776, "2026-08-20T09:20:00Z"], // ▲最高峰劍峰 3776m
+        [138.7268, 35.3632, 3758, "2026-08-20T09:35:00Z"],
+        [138.7282, 35.3656, 3742, "2026-08-20T09:48:00Z"],
+        [138.7312, 35.3664, 3728, "2026-08-20T10:00:00Z"],
+        [138.7345, 35.3642, 3715, "2026-08-20T10:15:00Z"]  // 完成火山口環線回到久須志神社
+      ];
+
+      // 進行平滑插值產生約 450 個高密度軌跡點
+      const interpolated = [];
+      const stepsPerSeg = 14;
+      for (let i = 0; i < rawWaypoints.length - 1; i++) {
+        const p1 = rawWaypoints[i];
+        const p2 = rawWaypoints[i + 1];
+        const t1 = new Date(p1[3]).getTime();
+        const t2 = new Date(p2[3]).getTime();
+        for (let s = 0; s < stepsPerSeg; s++) {
+          const r = s / stepsPerSeg;
+          interpolated.push({
+            lng: p1[0] + (p2[0] - p1[0]) * r,
+            lat: p1[1] + (p2[1] - p1[1]) * r,
+            ele: p1[2] + (p2[2] - p1[2]) * r,
+            time: new Date(t1 + (t2 - t1) * r)
+          });
+        }
+      }
+      const last = rawWaypoints[rawWaypoints.length - 1];
+      interpolated.push({
+        lng: last[0],
+        lat: last[1],
+        ele: last[2],
+        time: new Date(last[3])
+      });
+
+      return enrichTrackMetrics(interpolated);
+    }
+
+    // 計算兩點球面距離 (km)
+    function haversineKm(lng1, lat1, lng2, lat2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // 計算方位角 Bearing
+    function calcBearing(lng1, lat1, lng2, lat2) {
+      const toRad = d => d * Math.PI / 180;
+      const toDeg = r => r * 180 / Math.PI;
+      const dLon = toRad(lng2 - lng1);
+      const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+      const x =
+        Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+        Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+      return (toDeg(Math.atan2(y, x)) + 360) % 360;
+    }
+
+    // 為軌跡點計算累計距離、累計爬升、坡度
+    function enrichTrackMetrics(rawPts) {
+      let totalDistKm = 0;
+      let totalAscent = 0;
+      const result = [];
+
+      for (let i = 0; i < rawPts.length; i++) {
+        const pt = rawPts[i];
+        let slope = 0;
+
+        if (i > 0) {
+          const prev = rawPts[i - 1];
+          const dKm = haversineKm(prev.lng, prev.lat, pt.lng, pt.lat);
+          const dEle = pt.ele - prev.ele;
+          totalDistKm += dKm;
+          if (dEle > 0) totalAscent += dEle;
+
+          const dMeters = dKm * 1000;
+          if (dMeters > 0.5) {
+            slope = Math.max(-45, Math.min(45, (dEle / dMeters) * 100));
+          } else if (result.length > 0) {
+            slope = result[result.length - 1].slope;
+          }
+        }
+
+        result.push({
+          lng: pt.lng,
+          lat: pt.lat,
+          ele: pt.ele,
+          time: pt.time instanceof Date && !isNaN(pt.time) ? pt.time : null,
+          distKm: totalDistKm,
+          ascent: totalAscent,
+          slope: slope
+        });
+      }
+      return result;
+    }
+
+    // 檢查與初始化 Mapbox
+    function checkAndInitMap() {
+      const savedToken = localStorage.getItem('fujisan_mapbox_token');
+      if (
+        (!mapboxgl.accessToken || mapboxgl.accessToken === 'YOUR_MAPBOX_ACCESS_TOKEN') &&
+        savedToken
+      ) {
+        mapboxgl.accessToken = savedToken;
+      }
+
+      if (!mapboxgl.accessToken || mapboxgl.accessToken === 'YOUR_MAPBOX_ACCESS_TOKEN') {
+        document.getElementById('tokenModal').style.display = 'flex';
+        return;
+      }
+
+      initMap();
+    }
+
+    function initMap() {
+      trackPoints = generateDefaultFujisanTrack();
+
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center: INITIAL_CAMERA.center,
+        zoom: INITIAL_CAMERA.zoom,
+        pitch: INITIAL_CAMERA.pitch,
+        bearing: INITIAL_CAMERA.bearing,
+        antialias: true
+      });
+
+      map.on('style.load', () => {
+        // 1. 啟用 3D 真實地形高程 DEM (exaggeration: 1.25)
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
+        });
+        map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.25 });
+
+        // 大氣層與星空效果
+        map.setFog({
+          color: 'rgb(15, 22, 36)',
+          'high-color': 'rgb(8, 12, 24)',
+          'horizon-blend': 0.08,
+          'space-color': 'rgb(4, 6, 12)',
+          'star-intensity': 0.65
+        });
+
+        setupTrackLayers();
+        setupMarkers();
+        initElevationChart();
+        updateDashboardAt(0, false);
+      });
+
+      map.on('move', () => {
+        document.getElementById('valBearing').textContent = `${Math.round(map.getBearing())}°`;
+        document.getElementById('valPitch').textContent = `${Math.round(map.getPitch())}°`;
+      });
+    }
+
+    // 建立基底灰色軌跡與動態發光橘色 3D 緞帶軌跡圖層
+    function setupTrackLayers() {
+      const fullCoords = trackPoints.map(p => [p.lng, p.lat]);
+
+      map.addSource('full-track', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: fullCoords }
+        }
+      });
+
+      map.addSource('active-track', {
+        type: 'geojson',
+        lineMetrics: true,
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [fullCoords[0], fullCoords[0]] }
+        }
+      });
+
+      // 未走過的路段：灰色基底線
+      map.addLayer({
+        id: 'full-track-casing',
+        type: 'line',
+        source: 'full-track',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#1a222d',
+          'line-width': 8,
+          'line-opacity': 0.8
+        }
+      });
+
+      map.addLayer({
+        id: 'full-track-line',
+        type: 'line',
+        source: 'full-track',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#7d8590',
+          'line-width': 4,
+          'line-opacity': 0.75
+        }
+      });
+
+      // 已走過的路段：外層發光光暈
+      map.addLayer({
+        id: 'active-track-glow',
+        type: 'line',
+        source: 'active-track',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#ff6b00',
+          'line-width': 16,
+          'line-blur': 8,
+          'line-opacity': 0.65
+        }
+      });
+
+      // 已走過的路段：粗體漸層橘色 3D 緞帶感軌跡
+      map.addLayer({
+        id: 'active-track-ribbon',
+        type: 'line',
+        source: 'active-track',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-width': 7,
+          'line-gradient': [
+            'interpolate',
+            ['linear'],
+            ['line-progress'],
+            0, '#ff4500',
+            0.5, '#ff7b00',
+            1, '#ffd000'
+          ]
+        }
+      });
+    }
+
+    // 建立 3D 浮動標籤 (Marker) 與關鍵地標
+    function setupMarkers() {
+      const pois = [
+        { name: '五合目 2,305m', lng: 138.7342, lat: 35.3930 },
+        { name: '六合目 2,390m', lng: 138.7467, lat: 35.3856 },
+        { name: '七合目 2,700m', lng: 138.7440, lat: 35.3765 },
+        { name: '八合目 3,100m', lng: 138.7392, lat: 35.3695 },
+        { name: '九合目 3,600m', lng: 138.7360, lat: 35.3652 },
+        { name: '久須志神社 3,710m', lng: 138.7345, lat: 35.3642 },
+        { name: '▲劍峰 3,776m', lng: 138.7274, lat: 35.3606 }
+      ];
+
+      pois.forEach(poi => {
+        const el = document.createElement('div');
+        el.className = 'poi-marker';
+        el.textContent = poi.name;
+        new mapboxgl.Marker({ element: el, anchor: 'bottom', offset: [0, -6] })
+          .setLngLat([poi.lng, poi.lat])
+          .addTo(map);
+      });
+
+      // 動態進度點前端的 3D 懸浮標籤
+      hikerMarkerEl = document.createElement('div');
+      hikerMarkerEl.className = 'hiker-3d-marker';
+      hikerMarkerEl.innerHTML = `
+        <div class="hiker-label-box" id="hikerFloatingText">
+          <span class="elev-text">▲ 2,305m</span>
+          <span>-</span>
+          <span class="slope-text">坡度 0%</span>
+        </div>
+        <div class="hiker-dot"></div>
+      `;
+
+      hikerMarker = new mapboxgl.Marker({
+        element: hikerMarkerEl,
+        anchor: 'bottom',
+        pitchAlignment: 'viewport',
+        rotationAlignment: 'viewport'
+      })
+        .setLngLat([trackPoints[0].lng, trackPoints[0].lat])
+        .addTo(map);
+    }
+
+    // 初始化 Chart.js 垂直高程剖面圖
+    function initElevationChart() {
+      const ctx = document.getElementById('elevationChart').getContext('2d');
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, 140);
+      gradient.addColorStop(0, 'rgba(0, 255, 136, 0.45)');
+      gradient.addColorStop(1, 'rgba(0, 255, 136, 0.02)');
+
+      // 垂直進度指示線 Plugin
+      const verticalLinePlugin = {
+        id: 'verticalCursorLine',
+        afterDraw(chart) {
+          if (trackPoints.length === 0) return;
+          const idx = Math.min(trackPoints.length - 1, Math.round(currentFloatIndex));
+          const meta = chart.getDatasetMeta(0);
+          if (!meta || !meta.data || !meta.data[idx]) return;
+
+          const x = meta.data[idx].x;
+          const y = meta.data[idx].y;
+          const topY = chart.scales.y.top;
+          const bottomY = chart.scales.y.bottom;
+          const c = chart.ctx;
+
+          c.save();
+          c.beginPath();
+          c.moveTo(x, topY);
+          c.lineTo(x, bottomY);
+          c.lineWidth = 1.5;
+          c.strokeStyle = '#ff6b00';
+          c.stroke();
+
+          c.beginPath();
+          c.arc(x, y, 5, 0, Math.PI * 2);
+          c.fillStyle = '#ff6b00';
+          c.fill();
+          c.lineWidth = 2;
+          c.strokeStyle = '#ffffff';
+          c.stroke();
+          c.restore();
+        }
+      };
+
+      elevationChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: trackPoints.map(p => `${p.distKm.toFixed(2)} km`),
+          datasets: [{
+            label: '海拔 (m)',
+            data: trackPoints.map(p => Math.round(p.ele)),
+            borderColor: '#00ff88',
+            backgroundColor: gradient,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            fill: true,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(10, 15, 24, 0.9)',
+              borderColor: '#00ff88',
+              borderWidth: 1,
+              titleColor: '#8b949e',
+              bodyColor: '#00ff88',
+              displayColors: false,
+              callbacks: {
+                label: ctx => `海拔: ${ctx.parsed.y.toLocaleString()} m`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#8b949e', maxTicksLimit: 8, font: { size: 10 } },
+              grid: { color: 'rgba(255, 255, 255, 0.05)' }
+            },
+            y: {
+              ticks: { color: '#8b949e', maxTicksLimit: 5, font: { size: 10 } },
+              grid: { color: 'rgba(255, 255, 255, 0.06)' }
+            }
+          }
+        },
+        plugins: [verticalLinePlugin]
+      });
+
+      // 滑鼠滑過或拖曳圖表時，同步連動 3D 地圖上的登山位置
+      const canvas = document.getElementById('elevationChart');
+      let isDraggingChart = false;
+
+      const syncFromChartEvent = (evt) => {
+        const points = elevationChart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+        if (points.length > 0) {
+          const idx = points[0].index;
+          currentFloatIndex = idx;
+          updateDashboardAt(currentFloatIndex, true);
+        }
+      };
+
+      canvas.addEventListener('mousedown', (e) => {
+        isDraggingChart = true;
+        syncFromChartEvent(e);
+      });
+      canvas.addEventListener('mousemove', (e) => {
+        if (isDraggingChart || !isPlaying) {
+          syncFromChartEvent(e);
+        }
+      });
+      window.addEventListener('mouseup', () => {
+        isDraggingChart = false;
+      });
+    }
+
+    // 格式化行程時間 HH:MM:SS
+    function formatDuration(ms) {
+      if (!ms || ms < 0) return '00:00:00';
+      const totalSec = Math.floor(ms / 1000);
+      const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const secs = String(totalSec % 60).padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
+    }
+
+    // 核心更新函式：根據當前軌跡索引更新 3D 軌跡、Marker、數據面板與火山口自動視角
+    function updateDashboardAt(floatIdx, allowCameraFollow = true) {
+      if (!trackPoints.length || !map) return;
+
+      const maxIdx = trackPoints.length - 1;
+      const clampedIdx = Math.max(0, Math.min(maxIdx, floatIdx));
+      const baseIdx = Math.floor(clampedIdx);
+      const nextIdx = Math.min(maxIdx, baseIdx + 1);
+      const ratio = clampedIdx - baseIdx;
+
+      const p1 = trackPoints[baseIdx];
+      const p2 = trackPoints[nextIdx];
+
+      // 線性插值計算當前平滑位置與數據
+      const curLng = p1.lng + (p2.lng - p1.lng) * ratio;
+      const curLat = p1.lat + (p2.lat - p1.lat) * ratio;
+      const curEle = p1.ele + (p2.ele - p1.ele) * ratio;
+      const curDist = p1.distKm + (p2.distKm - p1.distKm) * ratio;
+      const curAscent = p1.ascent + (p2.ascent - p1.ascent) * ratio;
+      const curSlope = p1.slope + (p2.slope - p1.slope) * ratio;
+
+      // 1. 更新動態橘色漸層 3D 軌跡
+      const activeCoords = trackPoints.slice(0, baseIdx + 1).map(p => [p.lng, p.lat]);
+      activeCoords.push([curLng, curLat]);
+      if (activeCoords.length === 1) {
+        activeCoords.push([curLng, curLat]);
+      }
+
+      const activeSource = map.getSource('active-track');
+      if (activeSource) {
+        activeSource.setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: activeCoords }
+        });
+      }
+
+      // 2. 更新 3D 浮動標籤 (Marker)
+      if (hikerMarker) {
+        hikerMarker.setLngLat([curLng, curLat]);
+        const labelEl = document.getElementById('hikerFloatingText');
+        if (labelEl) {
+          const sign = curSlope >= 0 ? '+' : '';
+          labelEl.innerHTML = `
+            <span class="elev-text">▲ ${Math.round(curEle).toLocaleString()}m</span>
+            <span>-</span>
+            <span class="slope-text">坡度 ${sign}${Math.round(curSlope)}%</span>
+          `;
+        }
+      }
+
+      // 3. 更新下方數據儀表板與進度條
+      const pct = maxIdx > 0 ? (clampedIdx / maxIdx) * 100 : 0;
+      document.getElementById('progressSlider').value = Math.round((clampedIdx / maxIdx) * 1000);
+      document.getElementById('progressText').textContent = `${pct.toFixed(1)}%`;
+
+      document.getElementById('statDist').textContent = curDist.toFixed(2);
+      document.getElementById('statElev').textContent = Math.round(curEle).toLocaleString();
+      document.getElementById('statAscent').textContent = Math.round(curAscent).toLocaleString();
+      document.getElementById('statSlope').textContent = `${curSlope >= 0 ? '+' : ''}${curSlope.toFixed(1)}`;
+
+      let elapsedMs = 0;
+      if (trackPoints[0].time && p1.time) {
+        elapsedMs = p1.time.getTime() - trackPoints[0].time.getTime();
+      } else {
+        // 若 GPX 無時間戳，依比例推估行程時間
+        elapsedMs = (clampedIdx / maxIdx) * 7.5 * 3600 * 1000;
+      }
+      document.getElementById('statTime').textContent = formatDuration(elapsedMs);
+
+      // 高亮對應的頂部高度標籤
+      highlightStationPill(curEle);
+
+      // 4. 更新垂直高程剖面圖游標
+      if (elevationChart) {
+        elevationChart.update('none');
+      }
+
+      // 5. 【核心要求：🌋 火山口自動與手動特殊視角控制邏輯】
+      const badgeEl = document.getElementById('cameraModeBadge');
+      const craterBtn = document.getElementById('btnCraterView');
+
+      if (curEle >= 3700) {
+        // 當海拔高於 3,700m（進入御鉢巡り火山口環線路段），自動切換為「火山口深度俯瞰模式」
+        if (!craterModeActive) {
+          craterModeActive = true;
+          badgeEl.textContent = '🌋 火山口深度俯瞰模式（360° 環繞導覽）';
+          badgeEl.classList.add('crater-mode');
+          craterBtn.classList.add('active');
+        }
+
+        if (allowCameraFollow && lockHiker) {
+          // 強制將地圖中心點鎖定在火山口正中央 (138.7314, 35.3627)，並隨著登山者繞行火山口進行 360 度平滑旋轉
+          const angleFromCrater = calcBearing(CRATER_CENTER[0], CRATER_CENTER[1], curLng, curLat);
+          map.easeTo({
+            center: CRATER_CENTER,
+            zoom: 15.15,
+            pitch: 60,
+            bearing: (angleFromCrater + 110) % 360,
+            duration: 120,
+            easing: t => t
+          });
+        }
+      } else {
+        if (craterModeActive && isPlaying) {
+          craterModeActive = false;
+          badgeEl.textContent = '目前模式：登山軌跡跟隨視角';
+          badgeEl.classList.remove('crater-mode');
+          craterBtn.classList.remove('active');
+        }
+
+        if (allowCameraFollow && lockHiker && !craterModeActive) {
+          map.easeTo({
+            center: [curLng, curLat],
+            pitch: Math.max(55, map.getPitch()),
+            bearing: map.getBearing() + (autoOrbit ? 0.25 : 0),
+            duration: 100,
+            easing: t => t
+          });
+        }
+      }
+    }
+
+    // 根據海拔高亮頂部合目標籤
+    function highlightStationPill(ele) {
+      const pills = document.querySelectorAll('.station-pill');
+      let activePill = pills[0];
+      pills.forEach(pill => {
+        pill.classList.remove('active');
+        const targetEle = parseFloat(pill.dataset.elev);
+        if (ele >= targetEle - 25) {
+          activePill = pill;
+        }
+      });
+      if (activePill) activePill.classList.add('active');
+    }
+
+    // 動畫播放迴圈
+    function animationLoop(timestamp) {
+      if (! lastFrameTime) lastFrameTime = timestamp;
+      const dt = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+
+      if (isPlaying && trackPoints.length > 1) {
+        // 基準速度：1x 時約 45 秒走完全程
+        const basePointsPerSec = trackPoints.length / 45;
+        currentFloatIndex += basePointsPerSec * playSpeed * dt;
+
+        if (currentFloatIndex >= trackPoints.length - 1) {
+          currentFloatIndex = trackPoints.length - 1;
+          updateDashboardAt(currentFloatIndex, true);
+          togglePlayPause(false);
+        } else {
+          updateDashboardAt(currentFloatIndex, true);
+        }
+      } else if (autoOrbit && map) {
+        map.rotateTo((map.getBearing() + 12 * dt) % 360, { duration: 0 });
+      }
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    function togglePlayPause(forceState) {
+      isPlaying = typeof forceState === 'boolean' ? forceState : !isPlaying;
+      const btn = document.getElementById('btnPlayPause');
+      if (isPlaying) {
+        if (currentFloatIndex >= trackPoints.length - 1) {
+          currentFloatIndex = 0;
+        }
+        btn.textContent = '⏸ 暫停播放';
+      } else {
+        btn.textContent = '▶ 開始播放';
+      }
+    }
+
+    // ============================================================================
+    // GPX 檔案真實上傳與 toGeoJSON 解析邏輯
+    // ============================================================================
+    document.getElementById('gpxFileInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(e.target.result, 'text/xml');
+          const geojson = toGeoJSON.gpx(xmlDoc);
+
+          const extractedPts = [];
+          geojson.features.forEach(feat => {
+            if (!feat.geometry) return;
+            const times = feat.properties && feat.properties.coordTimes ? feat.properties.coordTimes : [];
+
+            if (feat.geometry.type === 'LineString') {
+              feat.geometry.coordinates.forEach((c, i) => {
+                extractedPts.push({
+                  lng: c[0],
+                  lat: c[1],
+                  ele: c[2] !== undefined ? c[2] : 2305,
+                  time: times[i] ? new Date(times[i]) : null
+                });
+              });
+            } else if (feat.geometry.type === 'MultiLineString') {
+              feat.geometry.coordinates.forEach((line, segIdx) => {
+                const segTimes = Array.isArray(times[segIdx]) ? times[segIdx] : [];
+                line.forEach((c, i) => {
+                  extractedPts.push({
+                    lng: c[0],
+                    lat: c[1],
+                    ele: c[2] !== undefined ? c[2] : 2305,
+                    time: segTimes[i] ? new Date(segTimes[i]) : null
+                  });
+                });
+              });
+            }
+          });
+
+          if (extractedPts.length < 2) {
+            alert('GPX 檔案中找不到有效的軌跡點 (trkpt)！');
+            return;
+          }
+
+          trackPoints = enrichTrackMetrics(extractedPts);
+          currentFloatIndex = 0;
+          togglePlayPause(false);
+
+          // 更新地圖基底軌跡
+          const fullCoords = trackPoints.map(p => [p.lng, p.lat]);
+          if (map && map.getSource('full-track')) {
+            map.getSource('full-track').setData({
+              type: 'Feature',
+              geometry: { type: 'LineString', coordinates: fullCoords }
+            });
+          }
+
+          // 更新高度剖面圖
+          if (elevationChart) {
+            elevationChart.data.labels = trackPoints.map(p => `${p.distKm.toFixed(2)} km`);
+            elevationChart.data.datasets[0].data = trackPoints.map(p => Math.round(p.ele));
+            elevationChart.update();
+          }
+
+          document.getElementById('trackSourceInfo').textContent =
+            `已載入 GPX：${file.name} (${trackPoints.length.toLocaleString()} 點)`;
+
+          updateDashboardAt(0, false);
+
+          // 飛越至上傳的軌跡起點
+          map.flyTo({
+            center: [trackPoints[0].lng, trackPoints[0].lat],
+            zoom: 14.2,
+            pitch: 62,
+            bearing: -145,
+            duration: 1800
+          });
+        } catch (err) {
+          console.error(err);
+          alert('GPX 解析失敗，請確認檔案格式正確。');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // ============================================================================
+    // UI 控制事件綁定
+    // ============================================================================
+    document.getElementById('btnPlayPause').addEventListener('click', () => togglePlayPause());
+
+    document.getElementById('btnReplay').addEventListener('click', () => {
+      currentFloatIndex = 0;
+      craterModeActive = false;
+      updateDashboardAt(0, true);
+      togglePlayPause(true);
+    });
+
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        playSpeed = parseFloat(btn.dataset.speed);
+      });
+    });
+
+    document.getElementById('progressSlider').addEventListener('input', (e) => {
+      const ratio = parseFloat(e.target.value) / 1000;
+      currentFloatIndex = ratio * (trackPoints.length - 1);
+      updateDashboardAt(currentFloatIndex, true);
+    });
+
+    // 右側相機控制按鈕
+    document.getElementById('btnZoomIn').addEventListener('click', () => map && map.zoomIn({ duration: 300 }));
+    document.getElementById('btnZoomOut').addEventListener('click', () => map && map.zoomOut({ duration: 300 }));
+    document.getElementById('btnRotateLeft').addEventListener('click', () => {
+      if (map) map.easeTo({ bearing: map.getBearing() - 25, duration: 350 });
+    });
+    document.getElementById('btnRotateRight').addEventListener('click', () => {
+      if (map) map.easeTo({ bearing: map.getBearing() + 25, duration: 350 });
+    });
+    document.getElementById('btnPitchUp').addEventListener('click', () => {
+      if (map) map.easeTo({ pitch: Math.min(80, map.getPitch() + 8), duration: 300 });
+    });
+    document.getElementById('btnPitchDown').addEventListener('click', () => {
+      if (map) map.easeTo({ pitch: Math.max(0, map.getPitch() - 8), duration: 300 });
+    });
+
+    // 鎖定登山位置切換
+    document.getElementById('btnLockHiker').addEventListener('click', (e) => {
+      lockHiker = !lockHiker;
+      const btn = e.currentTarget;
+      btn.classList.toggle('active-toggle', lockHiker);
+      btn.textContent = `📍 鎖定登山位置：${lockHiker ? '開啟' : '關閉'}`;
+    });
+
+    // 自動環繞切換
+    document.getElementById('btnAutoOrbit').addEventListener('click', (e) => {
+      autoOrbit = !autoOrbit;
+      const btn = e.currentTarget;
+      btn.classList.toggle('active-toggle', autoOrbit);
+      btn.textContent = `🔄 自動環繞：${autoOrbit ? '開啟' : '關閉'}`;
+    });
+
+    // 重置視角
+    document.getElementById('btnResetView').addEventListener('click', () => {
+      craterModeActive = false;
+      document.getElementById('btnCraterView').classList.remove('active');
+      const badgeEl = document.getElementById('cameraModeBadge');
+      badgeEl.textContent = '目前模式：登山軌跡跟隨視角';
+      badgeEl.classList.remove('crater-mode');
+
+      if (map) {
+        map.flyTo({
+          ...INITIAL_CAMERA,
+          duration: 1800
+        });
+      }
+    });
+
+    // 【手動特殊視角鈕：🌋 火山口環繞視角】
+    document.getElementById('btnCraterView').addEventListener('click', () => {
+      if (!map) return;
+      craterModeActive = true;
+      const craterBtn = document.getElementById('btnCraterView');
+      const badgeEl = document.getElementById('cameraModeBadge');
+      craterBtn.classList.add('active');
+      badgeEl.textContent = '🌋 火山口深度俯瞰模式（手動鎖定火山口中心）';
+      badgeEl.classList.add('crater-mode');
+
+      // 立即以 flyTo 平滑飛越到火山口正中央 (138.7314, 35.3627) 俯瞰整個富士山頂環線
+      map.flyTo({
+        center: CRATER_CENTER,
+        zoom: 15.2,
+        pitch: 62,
+        bearing: -35,
+        duration: 2400,
+        essential: true
+      });
+    });
+
+    // 點擊右上角合目標籤快速飛越並跳轉至對應海拔進度
+    document.querySelectorAll('.station-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const targetElev = parseFloat(pill.dataset.elev);
+        const lng = parseFloat(pill.dataset.lng);
+        const lat = parseFloat(pill.dataset.lat);
+
+        // 找到軌跡中最接近該海拔的索引點
+        let bestIdx = 0;
+        let minDiff = Infinity;
+        trackPoints.forEach((pt, idx) => {
+          const diff = Math.abs(pt.ele - targetElev);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestIdx = idx;
+          }
+        });
+
+        currentFloatIndex = bestIdx;
+        updateDashboardAt(currentFloatIndex, false);
+
+        if (map) {
+          if (targetElev >= 3700) {
+            map.flyTo({
+              center: CRATER_CENTER,
+              zoom: 15.15,
+              pitch: 60,
+              bearing: calcBearing(CRATER_CENTER[0], CRATER_CENTER[1], lng, lat) + 110,
+              duration: 1800
+            });
+          } else {
+            map.flyTo({
+              center: [trackPoints[bestIdx].lng, trackPoints[bestIdx].lat],
+              zoom: 14.6,
+              pitch: 62,
+              duration: 1500
+            });
+          }
+        }
+      });
+    });
+
+    // Token 儲存按鈕
+    document.getElementById('btnSaveToken').addEventListener('click', () => {
+      const val = document.getElementById('tokenInput').value.trim();
+      if (!val.startsWith('pk.')) {
+        alert('請輸入有效的 Mapbox Public Token (以 pk. 開頭)');
+        return;
+      }
+      localStorage.setItem('fujisan_mapbox_token', val);
+      mapboxgl.accessToken = val;
+      document.getElementById('tokenModal').style.display = 'none';
+      initMap();
+    });
+
+    // 啟動初始化與動畫迴圈
+    checkAndInitMap();
+    requestAnimationFrame(animationLoop);
+  </script>
+</body>
+</html>
