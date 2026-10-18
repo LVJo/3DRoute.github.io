@@ -9,16 +9,16 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 
-  <!-- 2. Three.js (用於 Mapbox Custom 3D Layer 渲染海拔 2000m-3000m 真實 3D 立體雲海) -->
+  <!-- 2. Three.js (用於 3D 立體雲霧渲染) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <!-- 3. EXIF.js (Cloudflare CDN，用於讀取上傳相片之 EXIF GPS 經緯度與拍攝時間) -->
+  <!-- 3. EXIF.js (Cloudflare CDN，解析相片原始 GPS 經緯度) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
 
-  <!-- 4. Chart.js (高度剖面圖) -->
+  <!-- 4. Chart.js (下方垂直高程剖面圖) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
-  <!-- 5. Mapbox toGeoJSON (GPX 解析) -->
+  <!-- 5. Mapbox toGeoJSON (解析 GPX 軌跡) -->
   <script src="https://unpkg.com/@mapbox/togeojson@0.16.0/togeojson.js"></script>
 
   <!-- Google Fonts -->
@@ -27,15 +27,15 @@
   <style>
     :root {
       --bg-dark: #070b12;
-      --glass-bg: rgba(10, 15, 24, 0.78);
-      --glass-border: rgba(255, 255, 255, 0.14);
+      --glass-bg: rgba(10, 15, 24, 0.84);
+      --glass-border: rgba(255, 255, 255, 0.18);
       --neon-green: #00ff88;
-      --neon-green-dim: rgba(0, 255, 136, 0.18);
+      --neon-green-dim: rgba(0, 255, 136, 0.2);
       --neon-orange: #ff6b00;
       --neon-orange-light: #ff9e00;
       --neon-blue: #00d2ff;
       --text-white: #f0f6fc;
-      --text-muted: #8b949e;
+      --text-muted: #9aa4b0;
     }
 
     * {
@@ -56,8 +56,7 @@
 
     #map {
       position: absolute;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100%;
       height: 100%;
       z-index: 1;
@@ -70,54 +69,53 @@
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--glass-border);
       border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      z-index: 10;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+      z-index: 20;
     }
 
-    /* 自訂捲軸 */
     ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.2);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.25);
+      background: rgba(0, 0, 0, 0.3);
       border-radius: 4px;
     }
-    ::-webkit-scrollbar-thumb:hover {
+    ::-webkit-scrollbar-thumb {
       background: var(--neon-green);
+      border-radius: 4px;
     }
 
-    /* 1. 頂部標題與狀態欄 */
+    /* ==========================================================================
+       1. 頂部標題與合目高度列
+       ========================================================================== */
     .top-bar {
       position: absolute;
-      top: 14px;
-      left: 16px;
-      right: 16px;
+      top: 12px;
+      left: 14px;
+      right: 14px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 14px;
+      gap: 12px;
       pointer-events: none;
-      z-index: 10;
+      z-index: 30;
     }
 
     .title-box {
       pointer-events: auto;
-      padding: 12px 18px;
+      padding: 10px 16px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
       border-left: 4px solid var(--neon-orange);
+      flex-shrink: 0;
     }
 
     .title-header-row {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
+      gap: 10px;
     }
 
     .badge-orange {
@@ -126,25 +124,25 @@
       font-family: 'Orbitron', sans-serif;
       font-size: 10px;
       font-weight: 700;
-      padding: 3px 9px;
+      padding: 3px 8px;
       border-radius: 4px;
       letter-spacing: 1px;
-      box-shadow: 0 0 12px rgba(255, 107, 0, 0.5);
+      box-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
     }
 
     .upload-btn {
-      background: rgba(0, 255, 136, 0.14);
+      background: rgba(0, 255, 136, 0.16);
       border: 1px solid var(--neon-green);
       color: var(--neon-green);
       font-size: 11px;
-      font-weight: 600;
-      padding: 3px 9px;
+      font-weight: 700;
+      padding: 3px 10px;
       border-radius: 4px;
       cursor: pointer;
       transition: all 0.2s;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
     }
 
     .upload-btn:hover {
@@ -153,51 +151,33 @@
       box-shadow: 0 0 12px var(--neon-green);
     }
 
-    .align-badge {
-      background: rgba(0, 210, 255, 0.14);
-      border: 1px solid rgba(0, 210, 255, 0.5);
-      color: var(--neon-blue);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .align-badge.active {
-      background: rgba(0, 210, 255, 0.28);
-      box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
-    }
-
     .main-title {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 900;
       letter-spacing: 0.5px;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
     }
 
-    /* 右上角關鍵地點高度標籤列 */
     .stations-bar {
       pointer-events: auto;
-      padding: 9px 12px;
+      padding: 8px 12px;
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 5px;
-      max-width: 65%;
+      gap: 4px;
+      justify-content: flex-end;
     }
 
     .station-pill {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 6px;
-      padding: 4px 9px;
+      padding: 4px 8px;
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--text-white);
       cursor: pointer;
-      transition: all 0.25s;
+      transition: all 0.2s;
       white-space: nowrap;
       display: flex;
       align-items: center;
@@ -211,15 +191,15 @@
     }
 
     .station-pill:hover, .station-pill.active {
-      background: rgba(255, 107, 0, 0.22);
+      background: rgba(255, 107, 0, 0.25);
       border-color: var(--neon-orange);
       transform: translateY(-1px);
-      box-shadow: 0 0 12px rgba(255, 107, 0, 0.4);
+      box-shadow: 0 0 10px rgba(255, 107, 0, 0.45);
     }
 
     .station-pill.peak {
-      border-color: rgba(0, 255, 136, 0.5);
-      background: rgba(0, 255, 136, 0.1);
+      border-color: rgba(0, 255, 136, 0.55);
+      background: rgba(0, 255, 136, 0.12);
     }
 
     .station-arrow {
@@ -227,64 +207,82 @@
       font-size: 10px;
     }
 
-    /* 2. 右側多功能控制面板（加入捲動支援容納縮時與相片系統） */
-    .right-panel {
+    /* ==========================================================================
+       2. 【全新獨立】左側進階功能控制面板（縮時攝影、軌跡校正、GPS 相片系統）
+       ========================================================================== */
+    .left-feature-panel {
       position: absolute;
-      top: 96px;
-      right: 16px;
-      bottom: 218px;
-      width: 285px;
-      padding: 14px;
+      top: 86px;
+      left: 14px;
+      max-height: calc(100vh - 282px);
+      width: 300px;
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
       gap: 12px;
       overflow-y: auto;
+      z-index: 25;
+      border-left: 3px solid var(--neon-green);
     }
 
-    .section-block {
+    /* ==========================================================================
+       3. 右側相機視角與底圖面板
+       ========================================================================== */
+    .right-panel {
+      position: absolute;
+      top: 86px;
+      right: 14px;
+      max-height: calc(100vh - 282px);
+      width: 245px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      z-index: 25;
+      border-right: 3px solid var(--neon-orange);
+    }
+
+    .feature-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-    }
-
-    .section-block:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
     }
 
     .panel-title {
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 800;
       color: var(--neon-green);
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
+      letter-spacing: 0.5px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 5px;
     }
 
     .panel-title.orange-title {
       color: var(--neon-orange-light);
     }
 
+    .panel-title.blue-title {
+      color: var(--neon-blue);
+    }
+
     .provider-select, .text-input, .url-textarea {
       width: 100%;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(0, 255, 136, 0.35);
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(0, 255, 136, 0.4);
       color: var(--text-white);
       border-radius: 6px;
-      padding: 6px 9px;
+      padding: 6px 8px;
       font-size: 11px;
       font-family: 'Noto Sans TC', sans-serif;
       outline: none;
-      transition: all 0.2s;
-    }
-
-    .provider-select:focus, .text-input:focus, .url-textarea:focus {
-      border-color: var(--neon-green);
-      box-shadow: 0 0 8px rgba(0, 255, 136, 0.25);
     }
 
     .provider-select option {
@@ -299,13 +297,13 @@
     }
 
     .ctrl-btn {
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       color: var(--text-white);
       border-radius: 6px;
       padding: 6px 8px;
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
       display: flex;
@@ -315,7 +313,7 @@
     }
 
     .ctrl-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.18);
       border-color: var(--neon-green);
       color: var(--neon-green);
     }
@@ -324,13 +322,20 @@
       background: var(--neon-green-dim);
       border-color: var(--neon-green);
       color: var(--neon-green);
-      box-shadow: 0 0 10px rgba(0, 255, 136, 0.25);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    .ctrl-btn.blue-toggle {
+      background: rgba(0, 210, 255, 0.18);
+      border-color: var(--neon-blue);
+      color: var(--neon-blue);
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
     }
 
     .cam-readout {
       display: flex;
       justify-content: space-between;
-      background: rgba(0, 0, 0, 0.35);
+      background: rgba(0, 0, 0, 0.4);
       padding: 6px 10px;
       border-radius: 6px;
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -350,11 +355,11 @@
     }
 
     .crater-special-btn {
-      background: linear-gradient(135deg, rgba(255, 107, 0, 0.28), rgba(255, 42, 0, 0.45));
+      background: linear-gradient(135deg, rgba(255, 107, 0, 0.35), rgba(255, 42, 0, 0.55));
       border: 1px solid var(--neon-orange);
       color: #fff;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       padding: 8px;
       border-radius: 8px;
       cursor: pointer;
@@ -363,45 +368,38 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      box-shadow: 0 0 15px rgba(255, 107, 0, 0.3);
+      box-shadow: 0 0 14px rgba(255, 107, 0, 0.35);
     }
 
     .crater-special-btn:hover, .crater-special-btn.active {
       background: linear-gradient(135deg, var(--neon-orange), #ff2a00);
-      box-shadow: 0 0 22px rgba(255, 107, 0, 0.8);
+      box-shadow: 0 0 22px rgba(255, 107, 0, 0.85);
     }
 
     .mode-indicator {
       font-size: 10px;
       text-align: center;
-      padding: 4px 6px;
+      padding: 5px 6px;
       border-radius: 4px;
-      background: rgba(0, 255, 136, 0.1);
+      background: rgba(0, 255, 136, 0.12);
       color: var(--neon-green);
-      border: 1px solid rgba(0, 255, 136, 0.3);
+      border: 1px solid rgba(0, 255, 136, 0.35);
+      line-height: 1.35;
     }
 
     .mode-indicator.crater-mode {
-      background: rgba(255, 107, 0, 0.2);
+      background: rgba(255, 107, 0, 0.22);
       color: var(--neon-orange-light);
       border-color: var(--neon-orange);
     }
 
-    /* 【升級 1】縮時攝影 (Time-lapse) 控制區塊樣式 */
-    .timelapse-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-    }
-
+    /* 縮時攝影專屬樣式 */
     .time-clock-badge {
       font-family: 'Orbitron', sans-serif;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      color: var(--neon-orange-light);
-      background: rgba(255, 107, 0, 0.15);
-      border: 1px solid rgba(255, 107, 0, 0.4);
+      color: #fff;
+      background: linear-gradient(90deg, #ff6b00, #ff9e00);
       padding: 2px 8px;
       border-radius: 4px;
     }
@@ -413,53 +411,55 @@
     }
 
     .tl-speed-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       color: var(--text-muted);
       font-family: 'Orbitron', sans-serif;
       font-size: 10px;
+      font-weight: 700;
       padding: 4px 0;
       border-radius: 4px;
       cursor: pointer;
-      transition: all 0.2s;
     }
 
     .tl-speed-btn.active {
-      background: rgba(255, 107, 0, 0.28);
-      border-color: var(--neon-orange);
+      background: var(--neon-orange);
+      border-color: #fff;
       color: #fff;
+      box-shadow: 0 0 8px rgba(255, 107, 0, 0.6);
     }
 
-    /* 【升級 4】GPS 相片載入區塊樣式 */
+    /* GPS 相片控制專屬樣式 */
     .photo-setting-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 11px;
-      color: var(--text-muted);
+      color: var(--text-white);
     }
 
     .photo-setting-row input {
-      width: 64px;
+      width: 60px;
       text-align: center;
       font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
       color: var(--neon-green);
     }
 
     .url-textarea {
       resize: vertical;
-      min-height: 52px;
+      min-height: 46px;
       font-family: monospace;
       font-size: 10px;
-      line-height: 1.4;
+      line-height: 1.35;
       user-select: text;
     }
 
     .photo-status-bar {
       font-size: 10px;
       color: var(--neon-green);
-      background: rgba(0, 255, 136, 0.08);
-      border: 1px solid rgba(0, 255, 136, 0.25);
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.3);
       border-radius: 4px;
       padding: 4px 8px;
       display: flex;
@@ -467,17 +467,20 @@
       align-items: center;
     }
 
-    /* 3. 下方數據儀表板與高度剖面圖 */
+    /* ==========================================================================
+       4. 下方數據儀表板與高度剖面圖
+       ========================================================================== */
     .bottom-dashboard {
       position: absolute;
-      bottom: 14px;
-      left: 16px;
-      right: 16px;
-      height: 192px;
-      padding: 14px 20px;
+      bottom: 12px;
+      left: 14px;
+      right: 14px;
+      height: 182px;
+      padding: 12px 18px;
       display: grid;
-      grid-template-columns: 440px 1fr;
-      gap: 20px;
+      grid-template-columns: 430px 1fr;
+      gap: 18px;
+      z-index: 30;
     }
 
     .left-controls-stats {
@@ -489,7 +492,7 @@
     .play-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .btn-play {
@@ -497,7 +500,7 @@
       color: #05100a;
       border: none;
       border-radius: 6px;
-      padding: 8px 16px;
+      padding: 7px 15px;
       font-size: 13px;
       font-weight: 900;
       cursor: pointer;
@@ -505,7 +508,6 @@
       align-items: center;
       gap: 6px;
       box-shadow: 0 0 14px rgba(0, 255, 136, 0.45);
-      transition: all 0.2s;
       white-space: nowrap;
     }
 
@@ -519,17 +521,11 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       color: var(--text-white);
       border-radius: 6px;
-      padding: 8px 12px;
+      padding: 7px 12px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
       white-space: nowrap;
-    }
-
-    .btn-replay:hover {
-      border-color: var(--neon-orange);
-      color: var(--neon-orange-light);
     }
 
     .speed-group {
@@ -544,24 +540,22 @@
       color: var(--text-muted);
       font-family: 'Orbitron', sans-serif;
       font-size: 11px;
-      padding: 5px 8px;
+      padding: 4px 7px;
       border-radius: 4px;
       cursor: pointer;
-      transition: all 0.2s;
     }
 
     .speed-btn.active {
-      background: rgba(255, 107, 0, 0.25);
+      background: rgba(255, 107, 0, 0.28);
       border-color: var(--neon-orange);
       color: #fff;
     }
 
-    /* 進度條時間軸 */
     .timeline-row {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin: 4px 0;
+      gap: 10px;
+      margin: 2px 0;
     }
 
     .progress-slider {
@@ -569,7 +563,7 @@
       appearance: none;
       width: 100%;
       height: 6px;
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.18);
       border-radius: 3px;
       outline: none;
       cursor: pointer;
@@ -585,45 +579,39 @@
       border: 2px solid #fff;
       box-shadow: 0 0 10px var(--neon-orange);
       cursor: pointer;
-      transition: transform 0.15s;
-    }
-
-    .progress-slider::-webkit-slider-thumb:hover {
-      transform: scale(1.25);
     }
 
     .progress-pct {
       font-family: 'Orbitron', sans-serif;
       font-size: 12px;
       color: var(--neon-orange-light);
-      min-width: 48px;
+      min-width: 46px;
       text-align: right;
     }
 
-    /* 5個數據欄 */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
+      gap: 6px;
     }
 
     .stat-card {
-      background: rgba(0, 0, 0, 0.35);
+      background: rgba(0, 0, 0, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
-      padding: 8px 6px;
+      padding: 6px 4px;
       text-align: center;
     }
 
     .stat-label {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .stat-value {
       font-family: 'Orbitron', sans-serif;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--neon-green);
     }
@@ -633,20 +621,19 @@
     }
 
     .stat-unit {
-      font-size: 10px;
+      font-size: 9px;
       color: var(--text-muted);
       margin-left: 2px;
     }
 
-    /* 右下垂直高程剖面圖 */
     .chart-container {
       position: relative;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.25);
+      background: rgba(0, 0, 0, 0.3);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 6px 12px;
       display: flex;
       flex-direction: column;
     }
@@ -662,7 +649,6 @@
 
     .chart-header strong {
       color: var(--neon-green);
-      letter-spacing: 0.5px;
     }
 
     .canvas-wrap {
@@ -743,11 +729,10 @@
       100% { transform: scale(2.1); opacity: 0; }
     }
 
-    /* 合目與山頂靜態小標籤 */
     .poi-marker {
-      background: rgba(7, 11, 18, 0.78);
-      border: 1px solid rgba(0, 255, 136, 0.45);
-      color: rgba(240, 246, 252, 0.88);
+      background: rgba(7, 11, 18, 0.82);
+      border: 1px solid rgba(0, 255, 136, 0.5);
+      color: rgba(240, 246, 252, 0.92);
       padding: 2px 7px;
       border-radius: 4px;
       font-size: 10px;
@@ -766,25 +751,37 @@
       box-shadow: 0 0 8px var(--neon-green);
     }
 
-    /* 地圖上的相片相機小地標 */
+    /* 地圖上的醒目相片地標 (📸) */
     .photo-map-pin {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: rgba(10, 16, 28, 0.9);
+      padding: 3px 8px;
+      border-radius: 14px;
+      background: rgba(8, 16, 30, 0.92);
       border: 2px solid var(--neon-blue);
       color: #fff;
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      box-shadow: 0 0 12px rgba(0, 210, 255, 0.7);
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
       cursor: pointer;
       transition: transform 0.2s;
+      z-index: 22;
     }
 
     .photo-map-pin:hover {
-      transform: scale(1.25);
+      transform: scale(1.15);
+      background: var(--neon-blue);
+      color: #000;
+    }
+
+    /* 3D 體積雲海 Canvas 多層次廣告牌樣式 */
+    .volumetric-cloud-billboard {
+      pointer-events: none;
+      z-index: 6;
+      will-change: transform, opacity;
+      transition: filter 0.5s ease;
     }
 
     /* Mapbox Popup 0.4 秒平滑淡入淡出樣式 */
@@ -808,7 +805,7 @@
     }
 
     .mapboxgl-popup.crater-geo-popup .mapboxgl-popup-content {
-      background: rgba(8, 13, 22, 0.88) !important;
+      background: rgba(8, 13, 22, 0.9) !important;
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border: 1.5px solid var(--neon-green);
@@ -855,24 +852,22 @@
       padding-top: 4px;
     }
 
-    /* ==========================================================================
-       【升級 4】GPS 相片動態觸發展示浮層（支援 CSS Fade In/Out 與自動停留倒數條）
-       ========================================================================== */
+    /* GPS 相片 50m 動態觸發展示浮層 */
     .photo-showcase-overlay {
       position: fixed;
-      top: 50%;
-      left: 42%;
+      top: 45%;
+      left: 50%;
       transform: translate(-50%, -46%) scale(0.92);
-      width: 420px;
-      max-width: 88vw;
+      width: 430px;
+      max-width: 90vw;
       padding: 14px;
-      z-index: 200;
+      z-index: 500;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-                  transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-      border: 1.5px solid var(--neon-blue);
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 28px rgba(0, 210, 255, 0.35);
+      transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+      border: 2px solid var(--neon-blue);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 32px rgba(0, 210, 255, 0.45);
     }
 
     .photo-showcase-overlay.is-visible {
@@ -899,36 +894,36 @@
       font-size: 10px;
       font-weight: 700;
       color: var(--neon-blue);
-      background: rgba(0, 210, 255, 0.14);
-      border: 1px solid rgba(0, 210, 255, 0.4);
-      padding: 2px 8px;
+      background: rgba(0, 210, 255, 0.16);
+      border: 1px solid rgba(0, 210, 255, 0.45);
+      padding: 3px 8px;
       border-radius: 4px;
     }
 
     .photo-skip-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: var(--text-white);
+      background: rgba(255, 107, 0, 0.25);
+      border: 1px solid var(--neon-orange);
+      color: #fff;
       font-size: 11px;
-      padding: 2px 8px;
+      font-weight: 700;
+      padding: 3px 10px;
       border-radius: 4px;
       cursor: pointer;
     }
 
     .photo-skip-btn:hover {
-      border-color: var(--neon-orange);
-      color: var(--neon-orange-light);
+      background: var(--neon-orange);
     }
 
     .photo-img-wrap {
       width: 100%;
-      height: 250px;
+      height: 240px;
       border-radius: 8px;
       overflow: hidden;
       background: #05080f;
       position: relative;
       margin-bottom: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
     }
 
     .photo-img-wrap img {
@@ -947,7 +942,7 @@
 
     .photo-title-text {
       font-size: 15px;
-      font-weight: 800;
+      font-weight: 900;
       color: var(--neon-green);
     }
 
@@ -959,14 +954,15 @@
 
     .photo-countdown-text {
       font-family: 'Orbitron', sans-serif;
-      font-size: 11px;
+      font-size: 12px;
+      font-weight: 700;
       color: var(--neon-orange-light);
     }
 
     .photo-progress-track {
       width: 100%;
-      height: 5px;
-      background: rgba(255, 255, 255, 0.12);
+      height: 6px;
+      background: rgba(255, 255, 255, 0.14);
       border-radius: 3px;
       overflow: hidden;
     }
@@ -975,15 +971,13 @@
       height: 100%;
       width: 100%;
       background: linear-gradient(90deg, var(--neon-blue), var(--neon-green));
-      transform-origin: left center;
-      transition: width 0.08s linear;
     }
 
     /* Mapbox Token 提示對話框 */
     .token-modal {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.82);
+      background: rgba(0, 0, 0, 0.84);
       backdrop-filter: blur(8px);
       display: none;
       align-items: center;
@@ -1021,13 +1015,6 @@
       outline: none;
       user-select: text;
     }
-
-    @media (max-width: 1100px) {
-      .top-bar { flex-direction: column; }
-      .stations-bar { max-width: 100%; }
-      .bottom-dashboard { grid-template-columns: 1fr; height: auto; }
-      .canvas-wrap { height: 110px; }
-    }
   </style>
 </head>
 <body>
@@ -1035,7 +1022,9 @@
   <!-- 3D 地圖容器 -->
   <div id="map"></div>
 
-  <!-- 1. 頂部標題與狀態欄 -->
+  <!-- ==========================================================================
+       1. 頂部標題與合目高度標籤列
+       ========================================================================== -->
   <div class="top-bar">
     <div class="title-box glass-panel">
       <div class="title-header-row">
@@ -1044,9 +1033,6 @@
           📂 上傳 GPX 軌跡檔
         </label>
         <input type="file" id="gpxFileInput" accept=".gpx,application/gpx+xml,text/xml" style="display:none" />
-        <button class="align-badge active" id="btnToggleCraterAlign" title="自動將山頂偏離的 GPX 軌跡平滑校正至御鉢巡り火山口邊緣">
-          🎯 山頂火山口軌跡自動校正：開啟
-        </button>
       </div>
       <div class="main-title">富士山攻頂・吉田路線 ＆ 御鉢巡り全長線</div>
     </div>
@@ -1062,67 +1048,32 @@
       <span class="station-arrow">➜</span>
       <div class="station-pill" data-elev="3600" data-lng="138.7368" data-lat="35.3682">九合目 <span class="elev">3,600m</span></div>
       <span class="station-arrow">➜</span>
-      <div class="station-pill" data-elev="3710" data-lng="138.7360" data-lat="35.3675">久須志神社(山頂終點) <span class="elev">3,710m</span></div>
+      <div class="station-pill" data-elev="3710" data-lng="138.7360" data-lat="35.3675">久須志神社 <span class="elev">3,710m</span></div>
       <span class="station-arrow">➜</span>
       <div class="station-pill peak" data-elev="3776" data-lng="138.7275" data-lat="35.3606">▲最高峰劍峰 <span class="elev">3,776m</span></div>
     </div>
   </div>
 
-  <!-- 2. 右側視角、縮時攝影與相片地標控制面板 -->
-  <div class="right-panel glass-panel">
-    <!-- 區塊 A：3D 視角與底圖控制 -->
-    <div class="section-block">
-      <div class="panel-title">
-        <span>CAMERA & VIEW 3D</span>
-        <span>🎮</span>
-      </div>
+  <!-- ==========================================================================
+       2. 【左側獨立面板】縮時攝影＆3D雲海、山頂軌跡自動校正、GPS 相片 50m 系統
+       ========================================================================== -->
+  <div class="left-feature-panel glass-panel">
 
-      <select id="mapStyleSelect" class="provider-select">
-        <option value="mapbox://styles/mapbox/satellite-streets-v12" selected>🛰️ Mapbox 3D 衛星 (預設)</option>
-        <option value="mapbox://styles/mapbox/outdoors-v12">⛰️ Mapbox 戶外等高線地形</option>
-        <option value="mapbox://styles/mapbox/streets-v12">🧭 開放街圖導航風 (Streets)</option>
-      </select>
-
-      <div class="cam-grid">
-        <button class="ctrl-btn" id="btnZoomIn">➕ 放大</button>
-        <button class="ctrl-btn" id="btnZoomOut">➖ 縮小</button>
-        <button class="ctrl-btn" id="btnRotateLeft">↺ 左旋角度</button>
-        <button class="ctrl-btn" id="btnRotateRight">↻ 右旋角度</button>
-        <button class="ctrl-btn" id="btnPitchUp">🔼 調高俯角</button>
-        <button class="ctrl-btn" id="btnPitchDown">🔽 降低視角</button>
-      </div>
-
-      <div class="cam-readout">
-        <div>方位角: <span class="val" id="valBearing">-145°</span></div>
-        <div>俯角: <span class="val" id="valPitch">60°</span></div>
-      </div>
-
-      <div class="toggle-list">
-        <button class="ctrl-btn active-toggle" id="btnLockHiker">📍 鎖定登山位置：開啟</button>
-        <button class="ctrl-btn" id="btnAutoOrbit">🔄 自動環繞：關閉</button>
-        <button class="ctrl-btn" id="btnResetView">🧭 重置視角</button>
-      </div>
-
-      <button class="crater-special-btn" id="btnCraterView">
-        🌋 火山口環繞視角
-      </button>
-
-      <div class="mode-indicator" id="cameraModeBadge">
-        目前模式：登山軌跡平滑跟隨
-      </div>
-    </div>
-
-    <!-- 【升級 1】區塊 B：縮時攝影（Time-lapse）晝夜光線與動態倍率控制 -->
-    <div class="section-block">
+    <!-- 【功能 1】縮時攝影 (Time-lapse) 與 3D 立體雲海 -->
+    <div class="feature-box">
       <div class="panel-title orange-title">
-        <span>🌅 縮時攝影 (TIME-LAPSE)</span>
+        <span>🌅 1. 縮時攝影 ＆ 3D 雲海</span>
         <span class="time-clock-badge" id="timeOfDayLabel">☀️ 06:30 日出</span>
       </div>
 
+      <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+        <span>拖曳調整 24H 晝夜日照角度：</span>
+        <span id="cloudStatusText" style="color:var(--neon-green);">☁️ 立體雲海運行中</span>
+      </div>
       <input type="range" id="timeOfDaySlider" class="progress-slider" min="0" max="24" step="0.05" value="6.5" />
 
       <button class="ctrl-btn" id="btnToggleTimelapse">
-        ⏱️ 自動縮時播放：關閉
+        ⏱️ 啟動自動縮時攝影：關閉
       </button>
 
       <div class="tl-speed-row">
@@ -1133,42 +1084,105 @@
       </div>
     </div>
 
-    <!-- 【升級 4】區塊 C：📸 載入行程照片（EXIF GPS 自動解析 + 雲端 URL + 停留設定） -->
-    <div class="section-block">
+    <!-- 【功能 2】山頂火山口 GPX 軌跡自動校正 (smoothTrackToCrater) -->
+    <div class="feature-box">
+      <div class="panel-title blue-title">
+        <span>🎯 2. 山頂火山口軌跡校正</span>
+        <span style="font-size:10px;">&gt;3700m</span>
+      </div>
+
+      <button class="ctrl-btn blue-toggle" id="btnToggleCraterAlign">
+        ✅ 御鉢巡り邊緣錨定校正：已開啟
+      </button>
+      <div id="craterAlignStatus" style="font-size:10px; color:var(--text-muted); line-height:1.4;">
+        已將山頂半徑 500m 內之偏離點透過極座標錨定與 Catmull-Rom 樣條平滑對齊火山口邊緣。
+      </div>
+    </div>
+
+    <!-- 【功能 3】GPS 相片 50m 自動觸發、暫停與倒數恢復系統 -->
+    <div class="feature-box">
       <div class="panel-title">
-        <span>📸 載入行程照片 (GPS EXIF)</span>
-        <span>📍50m</span>
+        <span>📸 3. 行程照片 (50m 自動觸發)</span>
+        <span style="font-size:10px; color:var(--neon-blue);">EXIF.js</span>
       </div>
 
       <div class="photo-setting-row">
-        <span>照片停留時間（秒）：</span>
+        <span>⏱️ 照片自動暫停停留秒數：</span>
         <input type="number" id="photoDurationInput" class="text-input" value="5" min="1" max="30" step="1" />
       </div>
 
       <label class="upload-btn" for="photoFileInput" style="justify-content:center; padding:6px;">
-        🖼️ 選擇本地照片 (自動解析 EXIF GPS)
+        🖼️ 上傳本地照片 (EXIF 自動讀取)
       </label>
       <input type="file" id="photoFileInput" multiple accept="image/*" style="display:none" />
 
-      <textarea id="cloudPhotoUrls" class="url-textarea" placeholder="貼上 Google Drive 或雲端圖片 URL：&#10;格式1: URL, 經度, 緯度, 拍攝時間&#10;格式2: 直接貼上含 EXIF 之圖片直連 URL"></textarea>
+      <textarea id="cloudPhotoUrls" class="url-textarea" placeholder="貼上 Google Drive 或雲端圖片 URL：&#10;格式: URL, 經度, 緯度, 拍攝時間"></textarea>
 
       <div class="cam-grid">
-        <button class="ctrl-btn" id="btnLoadCloudUrls">☁️ 解析雲端 URL</button>
-        <button class="ctrl-btn" id="btnLoadDemoPhotos">✨ 載入範例相片</button>
+        <button class="ctrl-btn" id="btnLoadCloudUrls">☁️ 載入雲端 URL</button>
+        <button class="ctrl-btn active-toggle" id="btnTestPhotoPopup">⚡ 立即測試彈窗</button>
       </div>
 
       <div class="photo-status-bar">
         <span id="photoCountText">已掛載 GPS 照片：3 張</span>
-        <span id="photoResetVisited" style="cursor:pointer; text-decoration:underline;">重置觸發</span>
+        <span id="photoResetVisited" style="cursor:pointer; text-decoration:underline;">重置觸發狀態</span>
       </div>
+    </div>
+
+  </div>
+
+  <!-- ==========================================================================
+       3. 【右側獨立面板】3D 相機控制、多底圖切換與火山口環繞視角
+       ========================================================================== -->
+  <div class="right-panel glass-panel">
+    <div class="panel-title">
+      <span>CAMERA & MAP 3D</span>
+      <span>🎮</span>
+    </div>
+
+    <div style="font-size:11px; color:var(--text-muted);">🗺️ 底圖風格切換 (保留 3D 地形)：</div>
+    <select id="mapStyleSelect" class="provider-select">
+      <option value="mapbox://styles/mapbox/satellite-streets-v12" selected>🛰️ Mapbox 3D 衛星 (預設)</option>
+      <option value="mapbox://styles/mapbox/outdoors-v12">⛰️ Mapbox 戶外等高線地形</option>
+      <option value="mapbox://styles/mapbox/streets-v12">🧭 開放街圖導航風 (Streets)</option>
+    </select>
+
+    <div class="cam-grid">
+      <button class="ctrl-btn" id="btnZoomIn">➕ 放大</button>
+      <button class="ctrl-btn" id="btnZoomOut">➖ 縮小</button>
+      <button class="ctrl-btn" id="btnRotateLeft">↺ 左旋角度</button>
+      <button class="ctrl-btn" id="btnRotateRight">↻ 右旋角度</button>
+      <button class="ctrl-btn" id="btnPitchUp">🔼 調高俯角</button>
+      <button class="ctrl-btn" id="btnPitchDown">🔽 降低視角</button>
+    </div>
+
+    <div class="cam-readout">
+      <div>方位角: <span class="val" id="valBearing">-145°</span></div>
+      <div>俯角: <span class="val" id="valPitch">60°</span></div>
+    </div>
+
+    <div class="toggle-list">
+      <button class="ctrl-btn active-toggle" id="btnLockHiker">📍 鎖定登山位置：開啟</button>
+      <button class="ctrl-btn" id="btnAutoOrbit">🔄 自動環繞：關閉</button>
+      <button class="ctrl-btn" id="btnResetView">🧭 重置視角</button>
+    </div>
+
+    <button class="crater-special-btn" id="btnCraterView">
+      🌋 火山口環繞視角
+    </button>
+
+    <div class="mode-indicator" id="cameraModeBadge">
+      目前模式：登山軌跡平滑跟隨
     </div>
   </div>
 
-  <!-- 【升級 4】相片 50m 動態觸發浮層 (Fade In -> 自動暫停軌跡 -> 倒數 -> Fade Out -> 自動恢復播放) -->
+  <!-- ==========================================================================
+       GPS 相片 50m 動態觸發浮層 (Fade In -> 自動暫停軌跡 -> 倒數 -> Fade Out -> 自動恢復播放)
+       ========================================================================== -->
   <div class="photo-showcase-overlay glass-panel" id="photoShowcaseModal">
     <div class="photo-card-header">
       <span class="photo-card-badge">📸 GPS PHOTO TRIGGERED (&lt; 50m)</span>
-      <button class="photo-skip-btn" id="btnSkipPhotoWait">跳過停留 ▶</button>
+      <button class="photo-skip-btn" id="btnSkipPhotoWait">跳過停留繼續播放 ▶</button>
     </div>
     <div class="photo-img-wrap">
       <img id="showcaseImg" src="" alt="Hiking Photo" />
@@ -1185,7 +1199,9 @@
     </div>
   </div>
 
-  <!-- 3. 下方數據儀表板與高度剖面圖 -->
+  <!-- ==========================================================================
+       4. 下方數據儀表板與高度剖面圖
+       ========================================================================== -->
   <div class="bottom-dashboard glass-panel">
     <div class="left-controls-stats">
       <div class="play-row">
@@ -1244,8 +1260,7 @@
     <div class="token-box glass-panel">
       <h3>🔑 請輸入 Mapbox Access Token</h3>
       <p>
-        您尚未在程式碼中填入您的 <code>mapboxgl.accessToken</code>。<br/>
-        您可以直接在下方貼上您的 Mapbox Public Token (<code>pk.eyJ...</code>) 立即啟動 3D 富士山地形儀表板：
+        請在下方貼上您的 Mapbox Public Token (<code>pk.eyJ...</code>) 立即啟動 3D 富士山地形儀表板：
       </p>
       <input type="text" id="tokenInput" class="token-input" placeholder="pk.eyJ1Ijoi..." />
       <button class="btn-play" id="btnSaveToken" style="justify-content:center;">啟動 3D 富士山儀表板</button>
@@ -1286,7 +1301,7 @@
     let hikerMarker = null;
     let hikerMarkerEl = null;
 
-    let rawUploadedPoints = []; // 保留原始未校正軌跡點以便隨時切換對比
+    let rawUploadedPoints = [];
     let trackPoints = [];
     let enableCraterAlignment = true;
 
@@ -1301,20 +1316,23 @@
     let lastFrameTime = 0;
 
     // 縮時攝影 (Time-lapse) 狀態
-    let timeOfDayHours = 6.5; // 0.0 ~ 24.0
+    let timeOfDayHours = 6.5;
     let isTimelapsePlaying = false;
-    let timelapseSpeed = 1;   // 1x, 5x, 10x, 50x
+    let timelapseSpeed = 1;
 
     // 地理圍欄 Popup 狀態
     let activeWaypointId = null;
     let activeWaypointPopup = null;
 
     // GPS 相片地標系統狀態
-    let geoPhotos = []; // [{ id, title, url, lng, lat, timeStr, visited, marker }]
+    let geoPhotos = [];
     let isPausedForPhoto = false;
     let wasPlayingBeforePhoto = false;
     let activePhotoTimer = null;
     let activePhotoAnimFrame = null;
+
+    // 3D 立體雲霧叢集陣列
+    const volumetricCloudBillboards = [];
 
     // 相機平滑狀態機
     const camState = {
@@ -1351,7 +1369,6 @@
       return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
     }
 
-    // 計算兩點球面距離 (km)
     function haversineKm(lng1, lat1, lng2, lat2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1363,7 +1380,6 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // 計算方位角 (-180 ~ 180)
     function calcBearing(lng1, lat1, lng2, lat2) {
       const toRad = d => d * Math.PI / 180;
       const toDeg = r => r * 180 / Math.PI;
@@ -1376,24 +1392,23 @@
     }
 
     // ============================================================================
-    // 【升級 1】縮時攝影（Time-lapse）：晝夜光線與大氣星空動態模擬
+    // 【核心功能 1】縮時攝影（Time-lapse）：晝夜光線、陰影走向與星空大氣模擬
     // ============================================================================
     const ATMOSPHERE_KEYFRAMES = [
-      { hour: 0.0,  name: '🌙 午夜星空', fog: [6, 10, 20],   high: [2, 4, 10],    space: [1, 2, 6],    light: [70, 100, 165], intensity: 0.18, stars: 0.95 },
-      { hour: 4.5,  name: '🌌 黎明前夕', fog: [18, 24, 48],  high: [10, 14, 32],  space: [4, 6, 16],   light: [120, 130, 190],intensity: 0.25, stars: 0.70 },
-      { hour: 5.5,  name: '🌅 御來光日出', fog: [255, 115, 65],high: [75, 45, 95],  space: [18, 15, 36], light: [255, 160, 95], intensity: 0.65, stars: 0.15 },
-      { hour: 8.5,  name: '🌤️ 晨間朝陽', fog: [135, 185, 230],high: [40, 95, 175], space: [12, 28, 58], light: [255, 242, 225],intensity: 0.72, stars: 0.0  },
-      { hour: 12.0, name: '☀️ 正午烈日', fog: [165, 210, 250],high: [45, 115, 210],space: [15, 38, 78], light: [255, 255, 250],intensity: 0.85, stars: 0.0  },
-      { hour: 16.5, name: '⛅ 午後斜陽', fog: [210, 175, 150],high: [65, 95, 160], space: [16, 26, 52], light: [255, 215, 170],intensity: 0.70, stars: 0.0  },
-      { hour: 18.2, name: '🌇 富士夕照', fog: [245, 90, 55], high: [85, 35, 75],  space: [15, 10, 28], light: [255, 115, 55], intensity: 0.62, stars: 0.25 },
-      { hour: 20.0, name: '🌆 暮色降臨', fog: [22, 26, 48],  high: [8, 12, 26],   space: [3, 5, 12],   light: [90, 115, 175], intensity: 0.22, stars: 0.80 },
-      { hour: 24.0, name: '🌙 午夜星空', fog: [6, 10, 20],   high: [2, 4, 10],    space: [1, 2, 6],    light: [70, 100, 165], intensity: 0.18, stars: 0.95 }
+      { hour: 0.0,  name: '🌙 午夜星空', fog: [6, 10, 22],   high: [2, 4, 12],    space: [1, 2, 6],    light: [75, 110, 180], intensity: 0.22, stars: 0.95 },
+      { hour: 4.5,  name: '🌌 黎明前夕', fog: [22, 28, 56],  high: [12, 16, 38],  space: [4, 6, 18],   light: [130, 140, 200],intensity: 0.30, stars: 0.70 },
+      { hour: 5.5,  name: '🌅 御來光日出', fog: [255, 110, 60],high: [90, 45, 100], space: [20, 15, 38], light: [255, 150, 80], intensity: 0.72, stars: 0.15 },
+      { hour: 8.5,  name: '🌤️ 晨間朝陽', fog: [135, 190, 235],high: [40, 100, 185],space: [12, 28, 60], light: [255, 245, 230],intensity: 0.78, stars: 0.0  },
+      { hour: 12.0, name: '☀️ 正午烈日', fog: [170, 215, 252],high: [45, 120, 215],space: [15, 40, 82], light: [255, 255, 250],intensity: 0.88, stars: 0.0  },
+      { hour: 16.5, name: '⛅ 午後斜陽', fog: [215, 175, 145],high: [70, 95, 165], space: [16, 26, 52], light: [255, 210, 165],intensity: 0.72, stars: 0.0  },
+      { hour: 18.2, name: '🌇 富士夕照', fog: [250, 85, 50], high: [95, 35, 80],  space: [16, 10, 30], light: [255, 105, 45], intensity: 0.68, stars: 0.25 },
+      { hour: 20.0, name: '🌆 暮色降臨', fog: [20, 25, 48],  high: [8, 12, 28],   space: [3, 5, 12],   light: [85, 115, 175], intensity: 0.25, stars: 0.85 },
+      { hour: 24.0, name: '🌙 午夜星空', fog: [6, 10, 22],   high: [2, 4, 12],    space: [1, 2, 6],    light: [75, 110, 180], intensity: 0.22, stars: 0.95 }
     ];
 
     function updateTimeOfDayLighting(hours) {
       timeOfDayHours = ((hours % 24) + 24) % 24;
 
-      // 更新 UI 滑桿與時鐘文字
       const slider = document.getElementById('timeOfDaySlider');
       if (slider && Math.abs(parseFloat(slider.value) - timeOfDayHours) > 0.02) {
         slider.value = timeOfDayHours.toFixed(2);
@@ -1402,7 +1417,6 @@
       const hh = String(Math.floor(timeOfDayHours)).padStart(2, '0');
       const mm = String(Math.floor((timeOfDayHours % 1) * 60)).padStart(2, '0');
 
-      // 找出當前時間落在哪兩個大氣關鍵影格之間
       let k1 = ATMOSPHERE_KEYFRAMES[0];
       let k2 = ATMOSPHERE_KEYFRAMES[ATMOSPHERE_KEYFRAMES.length - 1];
       for (let i = 0; i < ATMOSPHERE_KEYFRAMES.length - 1; i++) {
@@ -1418,11 +1432,10 @@
 
       const labelEl = document.getElementById('timeOfDayLabel');
       if (labelEl) {
-        const iconName = t < 0.5 ? k1.name : k2.name;
-        labelEl.textContent = `${iconName.split(' ')[0]} ${hh}:${mm} ${iconName.split(' ')[1] || ''}`;
+        const activeName = t < 0.5 ? k1.name : k2.name;
+        const parts = activeName.split(' ');
+        labelEl.textContent = `${parts[0]} ${hh}:${mm} ${parts[1] || ''}`;
       }
-
-      if (!map || !map.isStyleLoaded()) return;
 
       const fogRgb = lerpColor(k1.fog, k2.fog, t);
       const highRgb = lerpColor(k1.high, k2.high, t);
@@ -1431,11 +1444,24 @@
       const lightIntensity = lerp(k1.intensity, k2.intensity, t);
       const starIntensity = lerp(k1.stars, k2.stars, t);
 
-      // 計算太陽方位角 (Azimuth: 日出東方 90° -> 正午南方 180° -> 日落西方 270°) 與高度角 (Polar Angle)
-      const sunProgress = (timeOfDayHours - 6) / 12; // 06:00 為 0, 12:00 為 0.5, 18:00 為 1.0
+      // 隨日照色溫同步渲染雲朵色調（日出夕陽染橘紅、夜晚微藍、正午潔白）
+      const isGoldenHour = (timeOfDayHours >= 5.0 && timeOfDayHours <= 6.8) || (timeOfDayHours >= 17.2 && timeOfDayHours <= 19.0);
+      const isNight = timeOfDayHours < 5.0 || timeOfDayHours > 19.2;
+      volumetricCloudBillboards.forEach(c => {
+        if (isGoldenHour) {
+          c.wrapper.style.filter = 'sepia(0.35) saturate(1.8) hue-rotate(-18deg) brightness(0.95)';
+        } else if (isNight) {
+          c.wrapper.style.filter = 'brightness(0.45) contrast(1.1)';
+        } else {
+          c.wrapper.style.filter = 'brightness(1.02)';
+        }
+      });
+
+      if (!map || !map.isStyleLoaded()) return;
+
+      const sunProgress = (timeOfDayHours - 6) / 12;
       const azimuth = ((90 + sunProgress * 180) % 360 + 360) % 360;
       const isDaytime = timeOfDayHours >= 5.2 && timeOfDayHours <= 18.8;
-      // Mapbox polar angle: 0° 為正上方天頂，90° 為地平線
       const elevationSin = isDaytime ? Math.sin(Math.max(0, Math.min(1, sunProgress)) * Math.PI) : 0.15;
       const polarAngle = isDaytime ? (82 - elevationSin * 62) : 65;
 
@@ -1444,11 +1470,10 @@
           color: rgbToStr(fogRgb),
           'high-color': rgbToStr(highRgb),
           'space-color': rgbToStr(spaceRgb),
-          'horizon-blend': isDaytime ? 0.12 : 0.06,
+          'horizon-blend': isDaytime ? 0.14 : 0.06,
           'star-intensity': starIntensity
         });
 
-        // 使用 Mapbox GL JS v3 3D 光照系統驅動山體陰影與色溫
         if (typeof map.setLights === 'function') {
           map.setLights([
             {
@@ -1459,7 +1484,7 @@
                 intensity: lightIntensity,
                 direction: [azimuth, polarAngle],
                 'cast-shadows': true,
-                'shadow-intensity': isDaytime ? 0.65 : 0.25
+                'shadow-intensity': isDaytime ? 0.7 : 0.25
               }
             },
             {
@@ -1467,7 +1492,7 @@
               type: 'ambient',
               properties: {
                 color: rgbToStr(fogRgb),
-                intensity: isDaytime ? 0.42 : 0.22
+                intensity: isDaytime ? 0.45 : 0.22
               }
             }
           ]);
@@ -1479,51 +1504,54 @@
             position: [1.5, azimuth, polarAngle]
           });
         }
-      } catch (e) {
-        // 忽略底圖切換瞬間尚未就緒之例外
-      }
+      } catch (e) {}
     }
 
     // ============================================================================
-    // 【升級 2】超逼真 3D 立體雲霧效果（Mapbox Custom Layer + Three.js Volumetric Billboards）
+    // 【核心功能 2】超逼真 3D 立體雲霧效果（雙引擎：WebGL Three.js + 多層次碎形噪點立體雲團）
     // ============================================================================
-    const VolumetricCloudCustomLayer = {
-      id: 'fujisan-3d-volumetric-clouds',
-      type: 'custom',
-      renderingMode: '3d',
-      camera: null,
-      scene: null,
-      renderer: null,
-      cloudGroups: [],
+    // 生成帶有 Perlin/Fractal 碎形噪點高斯模糊質感的多層次雲霧貼圖
+    function createVolumetricCloudElement(baseSizePx, baseOpacity) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'volumetric-cloud-billboard';
+      wrapper.style.width = `${baseSizePx}px`;
+      wrapper.style.height = `${baseSizePx}px`;
+      wrapper.style.position = 'relative';
 
-      // 使用 Canvas 生成具備碎形噪點與高斯柔邊的逼真雲霧紋理
-      createFractalCloudTexture() {
-        const size = 256;
+      // 每朵雲由 3 層不同縮放、不同透明度與不同自轉速度的碎形雲霧 Canvas 疊加而成，呈現真實立體厚度
+      for (let layer = 0; layer < 3; layer++) {
         const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = 220;
+        canvas.height = 220;
+        canvas.style.position = 'absolute';
+        canvas.style.inset = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
         const ctx = canvas.getContext('2d');
 
-        // 繪製 18 個隨機偏心、多層透明度的蓬鬆雲團微粒構成單張體積雲貼圖
-        const subPuffs = [
-          { x: 0.50, y: 0.52, r: 0.44, a: 0.55 },
-          { x: 0.34, y: 0.48, r: 0.33, a: 0.45 },
-          { x: 0.66, y: 0.50, r: 0.35, a: 0.45 },
-          { x: 0.48, y: 0.35, r: 0.34, a: 0.42 },
-          { x: 0.42, y: 0.62, r: 0.30, a: 0.38 },
-          { x: 0.58, y: 0.60, r: 0.31, a: 0.38 },
-          { x: 0.28, y: 0.56, r: 0.24, a: 0.30 },
-          { x: 0.72, y: 0.42, r: 0.25, a: 0.30 }
+        // 繪製 10 個隨機偏心的高斯柔邊雲團微粒
+        const puffs = [
+          { x: 0.50, y: 0.50, r: 0.42, a: baseOpacity * 0.85 },
+          { x: 0.34, y: 0.46, r: 0.32, a: baseOpacity * 0.70 },
+          { x: 0.66, y: 0.48, r: 0.34, a: baseOpacity * 0.72 },
+          { x: 0.48, y: 0.34, r: 0.31, a: baseOpacity * 0.65 },
+          { x: 0.42, y: 0.64, r: 0.29, a: baseOpacity * 0.60 },
+          { x: 0.60, y: 0.62, r: 0.28, a: baseOpacity * 0.58 },
+          { x: 0.26, y: 0.55, r: 0.22, a: baseOpacity * 0.45 },
+          { x: 0.74, y: 0.40, r: 0.24, a: baseOpacity * 0.45 }
         ];
 
-        subPuffs.forEach(p => {
-          const cx = p.x * size;
-          const cy = p.y * size;
-          const rad = p.r * size;
-          const g = ctx.createRadialGradient(cx, cy, rad * 0.05, cx, cy, rad);
-          g.addColorStop(0.0, `rgba(255, 255, 255, ${p.a})`);
-          g.addColorStop(0.4, `rgba(245, 250, 255, ${p.a * 0.68})`);
-          g.addColorStop(0.75, `rgba(225, 236, 250, ${p.a * 0.24})`);
+        puffs.forEach(p => {
+          const jx = p.x + (Math.random() - 0.5) * 0.08;
+          const jy = p.y + (Math.random() - 0.5) * 0.08;
+          const cx = jx * 220;
+          const cy = jy * 220;
+          const rad = p.r * 220;
+          const g = ctx.createRadialGradient(cx, cy - rad * 0.12, rad * 0.04, cx, cy, rad);
+          // 頂部受光亮白、底部帶微藍灰立體陰影
+          g.addColorStop(0.0, `rgba(255, 255, 255, ${Math.min(1, p.a * 1.15)})`);
+          g.addColorStop(0.45, `rgba(244, 249, 255, ${p.a * 0.75})`);
+          g.addColorStop(0.78, `rgba(210, 225, 245, ${p.a * 0.28})`);
           g.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
           ctx.fillStyle = g;
           ctx.beginPath();
@@ -1531,144 +1559,114 @@
           ctx.fill();
         });
 
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-        return texture;
-      },
+        wrapper.appendChild(canvas);
+      }
 
-      onAdd(mapInstance, gl) {
-        this.camera = new THREE.Camera();
-        this.scene = new THREE.Scene();
-        this.cloudGroups = [];
+      return wrapper;
+    }
 
-        const cloudTexture = this.createFractalCloudTexture();
-        const terrainExaggeration = 1.25; // 對齊 Mapbox DEM 地形誇張倍率
+    function initVolumetricClouds() {
+      volumetricCloudBillboards.forEach(c => c.marker.remove());
+      volumetricCloudBillboards.length = 0;
 
-        // 在富士山海拔 2000m ~ 3000m 半山腰環狀區域部署 26 組多層次 3D 體積雲叢集
-        const cloudCount = 26;
-        for (let i = 0; i < cloudCount; i++) {
-          const angle = (i / cloudCount) * Math.PI * 2 + (Math.random() * 0.35);
-          // 海拔設定於 2000m ~ 3000m 之間
-          const altitudeMeters = 2050 + Math.random() * 920;
-          // 根據富士山錐體坡度，海拔越高離中心半徑越近 (約 0.018° ~ 0.042°)
-          const radiusDeg = 0.017 + ((3100 - altitudeMeters) / 1100) * 0.024 + (Math.random() - 0.5) * 0.005;
+      // 在富士山半山腰（海拔約 2000m ~ 3000m）環狀部署 14 組大型多層次 3D 體積雲叢集
+      const cloudDefs = [
+        { lng: 138.745, lat: 35.382, size: 230, alpha: 0.55, vLng: 0.00022, vLat: 0.00014 },
+        { lng: 138.736, lat: 35.388, size: 260, alpha: 0.50, vLng: 0.00019, vLat: 0.00012 },
+        { lng: 138.720, lat: 35.384, size: 210, alpha: 0.52, vLng: 0.00024, vLat: 0.00015 },
+        { lng: 138.708, lat: 35.372, size: 250, alpha: 0.48, vLng: 0.00021, vLat: 0.00013 },
+        { lng: 138.704, lat: 35.356, size: 240, alpha: 0.50, vLng: 0.00020, vLat: 0.00014 },
+        { lng: 138.714, lat: 35.342, size: 220, alpha: 0.54, vLng: 0.00023, vLat: 0.00016 },
+        { lng: 138.732, lat: 35.339, size: 270, alpha: 0.46, vLng: 0.00018, vLat: 0.00013 },
+        { lng: 138.748, lat: 35.348, size: 235, alpha: 0.52, vLng: 0.00022, vLat: 0.00015 },
+        { lng: 138.754, lat: 35.366, size: 245, alpha: 0.49, vLng: 0.00020, vLat: 0.00014 },
+        { lng: 138.742, lat: 35.374, size: 195, alpha: 0.58, vLng: 0.00025, vLat: 0.00016 },
+        { lng: 138.728, lat: 35.376, size: 215, alpha: 0.53, vLng: 0.00021, vLat: 0.00015 },
+        { lng: 138.718, lat: 35.362, size: 225, alpha: 0.50, vLng: 0.00022, vLat: 0.00013 }
+      ];
 
-          const lng = FUJI_CENTER[0] + Math.cos(angle) * radiusDeg * 1.18;
-          const lat = FUJI_CENTER[1] + Math.sin(angle) * radiusDeg * 0.95;
+      cloudDefs.forEach((def, idx) => {
+        const wrapper = createVolumetricCloudElement(def.size, def.alpha);
+        const layers = Array.from(wrapper.querySelectorAll('canvas'));
 
-          // 每組立體雲叢集包含 4~6 個不同高低起伏、不同透明度與縮放的 3D Billboard 粒子
-          const layersInCluster = 5;
-          const puffs = [];
+        const marker = new mapboxgl.Marker({
+          element: wrapper,
+          anchor: 'center',
+          pitchAlignment: 'viewport',
+          rotationAlignment: 'map'
+        })
+          .setLngLat([def.lng, def.lat])
+          .addTo(map);
 
-          for (let j = 0; j < layersInCluster; j++) {
-            const mat = new THREE.SpriteMaterial({
-              map: cloudTexture,
-              transparent: true,
-              opacity: 0.24 + Math.random() * 0.26,
-              depthWrite: false
-            });
-            const sprite = new THREE.Sprite(mat);
-            sprite.material.rotation = Math.random() * Math.PI * 2;
-            this.scene.add(sprite);
+        volumetricCloudBillboards.push({
+          marker,
+          wrapper,
+          layers,
+          lng: def.lng,
+          lat: def.lat,
+          resetLng: def.lng - 0.020,
+          resetLat: def.lat - 0.014,
+          vLng: def.vLng,
+          vLat: def.vLat,
+          angle1: idx * 30,
+          angle2: idx * -45,
+          angle3: idx * 15,
+          scalePhase: idx * 0.9
+        });
+      });
+    }
 
-            puffs.push({
-              sprite,
-              offsetLng: (Math.random() - 0.5) * 0.0045,
-              offsetLat: (Math.random() - 0.5) * 0.0045,
-              offsetAlt: (Math.random() - 0.5) * 180,
-              scaleMeters: 480 + Math.random() * 520,
-              rotSpeed: (Math.random() - 0.5) * 0.18
-            });
-          }
+    function updateVolumetricClouds(dt) {
+      if (!map || !volumetricCloudBillboards.length) return;
 
-          this.cloudGroups.push({
-            lng,
-            lat,
-            initAngle: angle,
-            radiusDeg,
-            altitudeMeters: altitudeMeters * terrainExaggeration,
-            driftSpeedLng: 0.00012 + Math.random() * 0.00010,
-            driftSpeedLat: 0.00008 + Math.random() * 0.00008,
-            bobPhase: Math.random() * Math.PI * 2,
-            puffs
-          });
+      // 當開啟縮時攝影時，雲朵流動與自轉速度同步按縮時倍率加速
+      const speedFactor = isTimelapsePlaying
+        ? Math.min(30, Math.max(1.2, timelapseSpeed * 0.65))
+        : (isPlaying ? Math.max(1, playSpeed * 0.85) : 1);
+
+      volumetricCloudBillboards.forEach(c => {
+        c.lng += c.vLng * dt * speedFactor;
+        c.lat += c.vLat * dt * speedFactor;
+
+        // 檢查是否飄出富士山半山腰邊界（> 5.6 km），自動重置回迎風側
+        const distKm = haversineKm(FUJI_CENTER[0], FUJI_CENTER[1], c.lng, c.lat);
+        if (distKm > 5.6) {
+          c.lng = c.resetLng;
+          c.lat = c.resetLat;
         }
 
-        this.renderer = new THREE.WebGLRenderer({
-          canvas: mapInstance.getCanvas(),
-          context: gl,
-          antialias: true
-        });
-        this.renderer.autoClear = false;
-      },
+        c.marker.setLngLat([c.lng, c.lat]);
 
-      // 在動畫迴圈中更新雲朵隨風飄移、Z軸起伏與微幅自轉
-      updateClouds(dt) {
-        if (!this.cloudGroups.length) return;
-        // 若開啟縮時攝影，雲朵移動速度同步按縮時倍率加速
-        const speedMultiplier = isTimelapsePlaying ? Math.min(25, Math.max(1, timelapseSpeed * 0.6)) : (isPlaying ? Math.max(1, playSpeed * 0.8) : 1);
+        // 3 個子雲層以不同速度微幅自轉與呼吸縮放，創造立體翻湧感
+        c.angle1 = (c.angle1 + 4.5 * dt * (1 + speedFactor * 0.15)) % 360;
+        c.angle2 = (c.angle2 - 3.2 * dt * (1 + speedFactor * 0.15)) % 360;
+        c.angle3 = (c.angle3 + 2.4 * dt * (1 + speedFactor * 0.15)) % 360;
+        c.scalePhase += dt * 0.9;
 
-        this.cloudGroups.forEach(cg => {
-          cg.lng += cg.driftSpeedLng * dt * speedMultiplier;
-          cg.lat += cg.driftSpeedLat * dt * speedMultiplier;
-          cg.bobPhase += dt * 0.8;
-
-          // 當雲朵飄離富士山半山腰範圍（> 5.8 km）時，平滑重置回西南迎風面半山腰
-          const distKm = haversineKm(FUJI_CENTER[0], FUJI_CENTER[1], cg.lng, cg.lat);
-          if (distKm > 5.8) {
-            cg.lng = FUJI_CENTER[0] - (cg.lng - FUJI_CENTER[0]) * 0.85;
-            cg.lat = FUJI_CENTER[1] - (cg.lat - FUJI_CENTER[1]) * 0.85;
-          }
-
-          const verticalBob = Math.sin(cg.bobPhase) * 35;
-
-          cg.puffs.forEach(p => {
-            p.sprite.material.rotation += p.rotSpeed * dt * (1 + speedMultiplier * 0.15);
-
-            const merc = mapboxgl.MercatorCoordinate.fromLngLat(
-              [cg.lng + p.offsetLng, cg.lat + p.offsetLat],
-              cg.altitudeMeters + p.offsetAlt + verticalBob
-            );
-            const meterScale = merc.meterInMercatorCoordinateUnits();
-
-            p.sprite.position.set(merc.x, merc.y, merc.z);
-            p.sprite.scale.set(
-              p.scaleMeters * meterScale,
-              p.scaleMeters * meterScale * 0.72,
-              1
-            );
-          });
-        });
-      },
-
-      render(gl, matrix) {
-        if (!this.renderer || !this.scene || !this.camera) return;
-        this.camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
-        this.renderer.resetState();
-        this.renderer.render(this.scene, this.camera);
-        if (map) map.triggerRepaint();
-      }
-    };
+        const breath = 1 + Math.sin(c.scalePhase) * 0.08;
+        if (c.layers[0]) c.layers[0].style.transform = `rotate(${c.angle1}deg) scale(${breath})`;
+        if (c.layers[1]) c.layers[1].style.transform = `translate(8px, -6px) rotate(${c.angle2}deg) scale(${1.05 / breath})`;
+        if (c.layers[2]) c.layers[2].style.transform = `translate(-7px, 5px) rotate(${c.angle3}deg) scale(${breath * 0.95})`;
+      });
+    }
 
     // ============================================================================
-    // 【升級 3】山頂 GPX 軌道偏離火山口之自動修正函數（smoothTrackToCrater）
+    // 【核心功能 3】山頂 GPX 軌道偏離火山口之自動修正（smoothTrackToCrater）
     // ============================================================================
-    // 富士山頂御鉢巡り真實步道極座標輪廓錨點（以火山口中心 138.7314, 35.3627 為極點）
     const CRATER_RIM_PROFILE = [
       { angle: -180, radiusM: 460 },
-      { angle: -145, radiusM: 510 }, // 劍峰西南側
-      { angle: -115, radiusM: 420 }, // ▲ 劍峰 (138.7275, 35.3606)
-      { angle: -65,  radiusM: 530 }, // 白山岳西側
-      { angle: -30,  radiusM: 560 }, // 白山岳 (138.7265, 35.3665)
-      { angle: 0,    radiusM: 490 }, // 北緣大內院觀景段
-      { angle: 38,   radiusM: 640 }, // 久須志神社 (138.7360, 35.3675)
-      { angle: 62,   radiusM: 520 }, // 成就岳 (138.7365, 35.3650)
-      { angle: 108,  radiusM: 400 }, // 伊豆岳 (138.7355, 35.3615)
-      { angle: 158,  radiusM: 500 }, // 朝日岳 (138.7335, 35.3585)
+      { angle: -145, radiusM: 510 },
+      { angle: -115, radiusM: 420 }, // 劍峰
+      { angle: -65,  radiusM: 530 },
+      { angle: -30,  radiusM: 560 }, // 白山岳
+      { angle: 0,    radiusM: 490 },
+      { angle: 38,   radiusM: 640 }, // 久須志神社
+      { angle: 62,   radiusM: 520 }, // 成就岳
+      { angle: 108,  radiusM: 400 }, // 伊豆岳
+      { angle: 158,  radiusM: 500 }, // 朝日岳
       { angle: 180,  radiusM: 460 }
     ];
 
-    // 根據極角查詢真實御鉢巡り火山口邊緣半徑 (公尺)
     function getIdealCraterRimRadiusM(bearingDeg) {
       for (let i = 0; i < CRATER_RIM_PROFILE.length - 1; i++) {
         const a1 = CRATER_RIM_PROFILE[i];
@@ -1681,7 +1679,6 @@
       return 480;
     }
 
-    // Catmull-Rom 樣條插值輔助函數
     function catmullRomSpline(p0, p1, p2, p3, t) {
       const t2 = t * t;
       const t3 = t2 * t;
@@ -1693,57 +1690,54 @@
       );
     }
 
-    /**
-     * 火山口軌跡校正函數 (smoothTrackToCrater)
-     * 當軌跡進入山頂區域（距離火山口中心 < 500m 且海拔 > 3700m）時，
-     * 自動執行「火山口邊緣極座標錨定 + 卡爾曼濾波 + Catmull-Rom 樣條平滑」，
-     * 確保橘色發光軌跡完美貼合御鉢巡り山脊，絕不穿入火山口深淵或飄移至空中。
-     */
     function smoothTrackToCrater(rawPts) {
+      const statusEl = document.getElementById('craterAlignStatus');
       if (!enableCraterAlignment || rawPts.length < 4) {
+        if (statusEl) {
+          statusEl.textContent = '⚠️ 已關閉校正：目前顯示原始未修正之山頂 GPX 座標（可能出現火山口內切漂移）。';
+          statusEl.style.color = '#ff9e00';
+        }
         return enrichTrackMetrics(rawPts);
       }
 
-      // 步驟 1：檢測山頂區域點，對偏離火山口邊緣的漂移點進行徑向錨定拉回
+      let correctedCount = 0;
       const anchoredPts = rawPts.map(pt => {
         const distFromCraterM = haversineKm(CRATER_CENTER[0], CRATER_CENTER[1], pt.lng, pt.lat) * 1000;
-        const isSummitCraterZone = pt.ele >= 3700 && distFromCraterM <= 680;
+        // 檢測距離火山口中心 < 650m (涵蓋 500m 核心區) 且海拔 > 3700m 的山頂點
+        const isSummitCraterZone = pt.ele >= 3700 && distFromCraterM <= 650;
 
         if (!isSummitCraterZone) {
           return { ...pt, isSummit: false };
         }
 
+        correctedCount++;
         const bearingDeg = calcBearing(CRATER_CENTER[0], CRATER_CENTER[1], pt.lng, pt.lat);
         const idealRadiusM = getIdealCraterRimRadiusM(bearingDeg);
 
-        // 若 GPS 點掉進火山口深淵 (dist < idealRadius) 或嚴重向外飄移，以 0.78 錨定權重拉回真實山脊步道
-        const correctedRadiusM = lerp(distFromCraterM, idealRadiusM, 0.78);
+        // 向真實火山口步道半徑進行錨定拉回
+        const correctedRadiusM = lerp(distFromCraterM, idealRadiusM, 0.85);
         const scaleRatio = distFromCraterM > 1 ? (correctedRadiusM / distFromCraterM) : 1;
-
-        const newLng = CRATER_CENTER[0] + (pt.lng - CRATER_CENTER[0]) * scaleRatio;
-        const newLat = CRATER_CENTER[1] + (pt.lat - CRATER_CENTER[1]) * scaleRatio;
 
         return {
           ...pt,
-          lng: newLng,
-          lat: newLat,
+          lng: CRATER_CENTER[0] + (pt.lng - CRATER_CENTER[0]) * scaleRatio,
+          lat: CRATER_CENTER[1] + (pt.lat - CRATER_CENTER[1]) * scaleRatio,
           isSummit: true
         };
       });
 
-      // 步驟 2：對山頂區段執行一維卡爾曼平滑濾波 (Kalman-like Low-pass Filter) 消除高頻鋸齒
+      // 卡爾曼低通濾波消除抖動
       const kalmanPts = anchoredPts.map(p => ({ ...p }));
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 1; i < kalmanPts.length - 1; i++) {
           if (kalmanPts[i].isSummit) {
             kalmanPts[i].lng = kalmanPts[i - 1].lng * 0.25 + kalmanPts[i].lng * 0.50 + kalmanPts[i + 1].lng * 0.25;
             kalmanPts[i].lat = kalmanPts[i - 1].lat * 0.25 + kalmanPts[i].lat * 0.50 + kalmanPts[i + 1].lat * 0.25;
-            kalmanPts[i].ele = kalmanPts[i - 1].ele * 0.20 + kalmanPts[i].ele * 0.60 + kalmanPts[i + 1].ele * 0.20;
           }
         }
       }
 
-      // 步驟 3：對山頂區段套用 Catmull-Rom 樣條插值，使轉彎處呈現電影級絲滑弧線
+      // Catmull-Rom 樣條插值平滑
       const finalPts = [];
       for (let i = 0; i < kalmanPts.length; i++) {
         const cur = kalmanPts[i];
@@ -1756,25 +1750,28 @@
           const p3 = kalmanPts[i + 2];
 
           const segDistM = haversineKm(p1.lng, p1.lat, p2.lng, p2.lat) * 1000;
-          if (segDistM > 25) {
-            const tMid = 0.5;
+          if (segDistM > 20) {
             finalPts.push({
-              lng: catmullRomSpline(p0.lng, p1.lng, p2.lng, p3.lng, tMid),
-              lat: catmullRomSpline(p0.lat, p1.lat, p2.lat, p3.lat, tMid),
-              ele: lerp(p1.ele, p2.ele, tMid),
+              lng: catmullRomSpline(p0.lng, p1.lng, p2.lng, p3.lng, 0.5),
+              lat: catmullRomSpline(p0.lat, p1.lat, p2.lat, p3.lat, 0.5),
+              ele: lerp(p1.ele, p2.ele, 0.5),
               time: p1.time && p2.time ? new Date((p1.time.getTime() + p2.time.getTime()) / 2) : p1.time
             });
           }
         }
       }
 
+      if (statusEl) {
+        statusEl.textContent = `✅ 已自動校正山頂 ${correctedCount} 個偏離軌跡點，完美貼合御鉢巡り火山口邊緣。`;
+        statusEl.style.color = '#00ff88';
+      }
+
       return enrichTrackMetrics(finalPts);
     }
 
     // ============================================================================
-    // 【升級 4】GPS 相片動態地標系統（EXIF.js 經緯度讀取 + Google Drive URL + 50m 自動暫停停留）
+    // 【核心功能 4】GPS 相片 50m 動態地標系統（EXIF.js + Google Drive URL + 自動暫停倒數）
     // ============================================================================
-    // 將 EXIF 度分秒陣列 [deg, min, sec] 轉換為十進位經緯度
     function exifDmsToDecimal(dmsArray, ref) {
       if (!dmsArray || dmsArray.length < 3) return null;
       const toNum = val => (typeof val === 'object' && val.numerator !== undefined)
@@ -1791,7 +1788,6 @@
       return dec;
     }
 
-    // 轉換 Google Drive 分享連結為可直接顯示的圖片串流連結
     function normalizeCloudImageUrl(rawUrl) {
       const trimmed = rawUrl.trim();
       const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -1801,19 +1797,18 @@
       return trimmed;
     }
 
-    // 新增一張具備 GPS 座標的相片至 3D 地圖與監測佇列
     function registerGeoPhoto({ title, url, lng, lat, timeStr }) {
       if (typeof lng !== 'number' || typeof lat !== 'number' || isNaN(lng) || isNaN(lat)) return false;
 
       const id = 'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       const pinEl = document.createElement('div');
       pinEl.className = 'photo-map-pin';
-      pinEl.innerHTML = '📸';
-      pinEl.title = `${title} (${timeStr || '點擊預覽'})`;
+      pinEl.innerHTML = `📸 <span>${title.slice(0, 6)}</span>`;
+      pinEl.title = `點擊預覽相片：${title} (${timeStr})`;
 
       let marker = null;
       if (map) {
-        marker = new mapboxgl.Marker({ element: pinEl, anchor: 'center' })
+        marker = new mapboxgl.Marker({ element: pinEl, anchor: 'bottom', offset: [0, -8] })
           .setLngLat([lng, lat])
           .addTo(map);
       }
@@ -1829,7 +1824,6 @@
         marker
       };
 
-      // 點擊地圖上的相機圖示亦可直接彈出觀看
       pinEl.addEventListener('click', (e) => {
         e.stopPropagation();
         triggerPhotoShowcase(photoObj);
@@ -1847,40 +1841,38 @@
       }
     }
 
-    // 載入內建 3 張富士山登山路徑上的預設範例相片（分別位於七合目、久須志神社、劍峰）
     function loadDefaultDemoPhotos() {
-      // 清除舊標記
       geoPhotos.forEach(p => p.marker && p.marker.remove());
       geoPhotos = [];
 
       const demoList = [
         {
+          title: '五合目・登山口出發紀念',
+          url: 'https://images.unsplash.com/photo-1570459027562-4a916cc6113f?auto=format&fit=crop&w=900&q=80',
+          lng: 138.737688,
+          lat: 35.391313,
+          timeStr: '2026-08-20 02:48:06'
+        },
+        {
           title: '七合目・花小屋破曉雲海',
           url: 'https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?auto=format&fit=crop&w=900&q=80',
           lng: 138.7440,
           lat: 35.3765,
-          timeStr: '2026-08-20 04:45:12'
+          timeStr: '2026-08-20 04:45:00'
         },
         {
-          title: '吉田口頂上・久須志神社鳥居',
+          title: '吉田口頂上・久須志神社',
           url: 'https://images.unsplash.com/photo-1578271887552-5ac3a72752bc?auto=format&fit=crop&w=900&q=80',
           lng: 138.7360,
           lat: 35.3675,
-          timeStr: '2026-08-20 08:20:30'
-        },
-        {
-          title: '日本最高峰・劍峰 3,776m 紀念碑',
-          url: 'https://images.unsplash.com/photo-1570459027562-4a916cc6113f?auto=format&fit=crop&w=900&q=80',
-          lng: 138.7275,
-          lat: 35.3606,
-          timeStr: '2026-08-20 09:28:00'
+          timeStr: '2026-08-20 08:20:00'
         }
       ];
 
       demoList.forEach(item => registerGeoPhoto(item));
     }
 
-    // 檢查當前軌跡點是否進入某張照片的 50 公尺範圍內
+    // 檢測橘色光點是否進入相片 50 公尺範圍內
     function checkPhotoGeoFence(curLng, curLat) {
       if (isPausedForPhoto || !geoPhotos.length) return;
 
@@ -1895,12 +1887,10 @@
       }
     }
 
-    // 觸發相片淡入顯示、自動暫停軌跡、執行倒數進度條、結束後淡出並恢復播放
     function triggerPhotoShowcase(photo) {
       if (activePhotoTimer) clearTimeout(activePhotoTimer);
       if (activePhotoAnimFrame) cancelAnimationFrame(activePhotoAnimFrame);
 
-      // 記錄觸發前是否正在播放，並自動暫停軌跡
       wasPlayingBeforePhoto = isPlaying;
       if (isPlaying) {
         togglePlayPause(false);
@@ -1934,7 +1924,7 @@
         const remainSec = Math.max(0, (durationMs - elapsed) / 1000);
         const pct = Math.max(0, 100 - (elapsed / durationMs) * 100);
 
-        countdownEl.textContent = `停留 ${remainSec.toFixed(1)}s`;
+        countdownEl.textContent = `自動暫停中：剩餘 ${remainSec.toFixed(1)}s`;
         barEl.style.width = `${pct}%`;
 
         if (elapsed < durationMs) {
@@ -1959,11 +1949,10 @@
       setTimeout(() => {
         modal.classList.remove('is-fading-out');
         isPausedForPhoto = false;
-        // 停留結束後，若原本處於播放狀態則自動恢復軌跡播放 (Resume)
         if (wasPlayingBeforePhoto) {
           togglePlayPause(true);
         }
-      }, 450);
+      }, 420);
     }
 
     // ============================================================================
@@ -2105,7 +2094,7 @@
       }
     }
 
-    // 內建真實感吉田路線 + 含輕微模擬漂移的山頂御鉢巡り環線（供驗證 smoothTrackToCrater 自動校正）
+    // 內建真實感吉田路線 + 刻意加入幾個山頂漂移點以展示「火山口軌跡自動校正」切換差異
     function generateDefaultFujisanTrack() {
       const rawWaypoints = [
         [138.734166, 35.393024, 2305, "2026-08-20T02:40:50Z"],
@@ -2132,21 +2121,21 @@
         [138.7382, 35.3688, 3320, "2026-08-20T06:45:00Z"],
         [138.7375, 35.3684, 3480, "2026-08-20T07:20:00Z"],
         [138.7368, 35.3682, 3600, "2026-08-20T07:50:00Z"],
-        // 山頂御鉢巡り段
+        // 山頂御鉢巡り段（包含模擬 GPS 往火山口內側漂移的點，開啟校正時會自動拉回火山口邊緣）
         [138.7360, 35.3675, 3710, "2026-08-20T08:20:00Z"],
-        [138.7365, 35.3650, 3725, "2026-08-20T08:32:00Z"],
+        [138.7342, 35.3642, 3725, "2026-08-20T08:32:00Z"], // 模擬向火山口內側偏離點
         [138.7355, 35.3615, 3732, "2026-08-20T08:45:00Z"],
         [138.7335, 35.3585, 3740, "2026-08-20T08:58:00Z"],
-        [138.7295, 35.3575, 3722, "2026-08-20T09:12:00Z"],
+        [138.7305, 35.3602, 3722, "2026-08-20T09:12:00Z"], // 模擬向火山口深淵偏離點
         [138.7275, 35.3606, 3776, "2026-08-20T09:28:00Z"],
         [138.7262, 35.3635, 3760, "2026-08-20T09:42:00Z"],
         [138.7265, 35.3665, 3756, "2026-08-20T09:55:00Z"],
-        [138.7314, 35.3672, 3735, "2026-08-20T10:08:00Z"],
+        [138.7314, 35.3652, 3735, "2026-08-20T10:08:00Z"], // 模擬向內側偏離點
         [138.7360, 35.3675, 3715, "2026-08-20T10:20:00Z"]
       ];
 
       const interpolated = [];
-      const stepsPerSeg = 16;
+      const stepsPerSeg = 15;
       for (let i = 0; i < rawWaypoints.length - 1; i++) {
         const p1 = rawWaypoints[i];
         const p2 = rawWaypoints[i + 1];
@@ -2242,12 +2231,6 @@
       map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.25 });
 
       setupTrackLayers();
-
-      // 掛載 Three.js 3D 立體雲海 Custom Layer
-      if (!map.getLayer(VolumetricCloudCustomLayer.id)) {
-        map.addLayer(VolumetricCloudCustomLayer);
-      }
-
       updateTimeOfDayLighting(timeOfDayHours);
       updateDashboardAt(currentFloatIndex, false);
     }
@@ -2271,6 +2254,7 @@
 
       map.on('load', () => {
         setupMarkers();
+        initVolumetricClouds();
         loadDefaultDemoPhotos();
         initElevationChart();
         syncCamStateFromMap(true);
@@ -2668,13 +2652,12 @@
       const dt = Math.min(0.1, (timestamp - lastFrameTime) / 1000);
       lastFrameTime = timestamp;
 
-      // 1. 更新 Three.js 3D 立體雲海自轉與隨風飄移
-      VolumetricCloudCustomLayer.updateClouds(dt);
+      // 1. 更新半山腰 3D 多層次立體雲海自轉與隨風飄移
+      updateVolumetricClouds(dt);
 
       // 2. 若開啟「縮時攝影 (Time-lapse)」，依倍率推進一天中的時間並動態渲染晝夜光影
       if (isTimelapsePlaying) {
-        // 1x 基準：每秒推進 0.15 小時（約 9 分鐘日照變化）
-        const nextHour = timeOfDayHours + dt * 0.15 * timelapseSpeed;
+        const nextHour = timeOfDayHours + dt * 0.18 * timelapseSpeed;
         updateTimeOfDayLighting(nextHour);
       }
 
@@ -2718,7 +2701,6 @@
       }
     }
 
-    // 重新套用或切換山頂火山口軌跡校正
     function refreshTrackAlignment() {
       const progressRatio = trackPoints.length > 1 ? currentFloatIndex / (trackPoints.length - 1) : 0;
       trackPoints = smoothTrackToCrater(rawUploadedPoints);
@@ -2742,9 +2724,9 @@
     }
 
     // ============================================================================
-    // 事件綁定：縮時攝影、GPX 載入、EXIF 相片解析與雲端 URL
+    // 事件綁定：左側三大新功能與右側視角控制
     // ============================================================================
-    // 1. 縮時攝影滑桿與按鈕
+    // 1. 縮時攝影滑桿與自動播放按鈕
     document.getElementById('timeOfDaySlider').addEventListener('input', (e) => {
       updateTimeOfDayLighting(parseFloat(e.target.value));
     });
@@ -2753,7 +2735,7 @@
       isTimelapsePlaying = !isTimelapsePlaying;
       const btn = e.currentTarget;
       btn.classList.toggle('active-toggle', isTimelapsePlaying);
-      btn.textContent = `⏱️ 自動縮時播放：${isTimelapsePlaying ? '開啟' : '關閉'}`;
+      btn.textContent = `⏱️ 啟動自動縮時攝影：${isTimelapsePlaying ? '開啟中' : '關閉'}`;
     });
 
     document.querySelectorAll('.tl-speed-btn').forEach(btn => {
@@ -2764,16 +2746,27 @@
       });
     });
 
-    // 2. 山頂火山口軌跡自動校正開關
+    // 2. 山頂火山口軌跡自動校正開關 (點擊時自動飛越至山頂火山口展示軌跡校正差異)
     document.getElementById('btnToggleCraterAlign').addEventListener('click', (e) => {
       enableCraterAlignment = !enableCraterAlignment;
       const btn = e.currentTarget;
-      btn.classList.toggle('active', enableCraterAlignment);
-      btn.textContent = `🎯 山頂火山口軌跡自動校正：${enableCraterAlignment ? '開啟' : '關閉'}`;
+      btn.classList.toggle('blue-toggle', enableCraterAlignment);
+      btn.textContent = enableCraterAlignment
+        ? '✅ 御鉢巡り邊緣錨定校正：已開啟'
+        : '❌ 御鉢巡り邊緣錨定校正：已關閉';
       refreshTrackAlignment();
+
+      if (map && !isPlaying) {
+        map.flyTo({
+          center: CRATER_CENTER,
+          zoom: 15.1,
+          pitch: 58,
+          duration: 1200
+        });
+      }
     });
 
-    // 3. 本地相片上傳 (利用 EXIF.js 解析原始經緯度與拍照時間)
+    // 3. 本地相片上傳 (EXIF.js)
     document.getElementById('photoFileInput').addEventListener('change', (event) => {
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
@@ -2804,23 +2797,22 @@
             });
             addedCount++;
           } else {
-            // 無內建 GPS 位置，自動忽略該照片
             ignoredCount++;
           }
 
           processed++;
           if (processed === files.length) {
-            alert(`📸 相片解析完成！\n成功載入含 GPS 照片：${addedCount} 張\n自動忽略無 GPS 照片：${ignoredCount} 張`);
+            alert(`📸 相片 EXIF 解析完成！\n成功載入含 GPS 照片：${addedCount} 張\n自動忽略無 GPS 照片：${ignoredCount} 張`);
           }
         });
       });
     });
 
-    // 4. 解析 Google Drive / 雲端照片 URL 陣列
+    // 4. 解析雲端照片 URL 陣列
     document.getElementById('btnLoadCloudUrls').addEventListener('click', async () => {
       const rawText = document.getElementById('cloudPhotoUrls').value.trim();
       if (!rawText) {
-        alert('請先在文本框輸入雲端照片 URL！');
+        alert('請先在文本框輸入雲端照片 URL！\n範例格式：\nhttps://images.unsplash.com/photo-1490806843957-31f4c9a91c65, 138.7392, 35.3695, 2026-08-20 06:05');
         return;
       }
 
@@ -2829,7 +2821,6 @@
       const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
 
       for (const line of lines) {
-        // 支援格式 A: URL, 經度, 緯度, 拍攝時間 (或標題)
         const parts = line.split(',').map(s => s.trim());
         if (parts.length >= 3 && !isNaN(parseFloat(parts[1])) && !isNaN(parseFloat(parts[2]))) {
           const url = normalizeCloudImageUrl(parts[0]);
@@ -2842,7 +2833,6 @@
             ignored++;
           }
         } else {
-          // 支援格式 B: 單純圖片 URL，嘗試透過 fetch + EXIF.js 讀取遠端圖片 EXIF
           try {
             const url = normalizeCloudImageUrl(parts[0]);
             const resp = await fetch(url, { mode: 'cors' });
@@ -2862,7 +2852,6 @@
               });
             });
           } catch (err) {
-            // 若雲端路徑跨域或無 GPS 解析失敗，自動忽略該照片
             ignored++;
           }
         }
@@ -2871,12 +2860,15 @@
       alert(`☁️ 雲端照片處理完成：\n成功掛載：${added} 張\n無 GPS 或無法讀取已忽略：${ignored} 張`);
     });
 
-    document.getElementById('btnLoadDemoPhotos').addEventListener('click', () => {
-      loadDefaultDemoPhotos();
+    // 立即測試相片彈窗與倒數恢復功能按鈕
+    document.getElementById('btnTestPhotoPopup').addEventListener('click', () => {
+      if (!geoPhotos.length) loadDefaultDemoPhotos();
+      triggerPhotoShowcase(geoPhotos[0]);
     });
 
     document.getElementById('photoResetVisited').addEventListener('click', () => {
       geoPhotos.forEach(p => { p.visited = false; });
+      alert('已重置所有相片的觸發狀態！當軌跡再次經過相片 50m 範圍內時將自動暫停並彈出相片。');
     });
 
     document.getElementById('btnSkipPhotoWait').addEventListener('click', () => {
@@ -2936,7 +2928,6 @@
           }
 
           rawUploadedPoints = extractedPts;
-          // 自動執行山頂火山口軌跡錨定與樣條插值校正
           trackPoints = smoothTrackToCrater(rawUploadedPoints);
 
           currentFloatIndex = 0;
